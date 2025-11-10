@@ -29,7 +29,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get("httpMethod", "")
 
     # Extract user ID from Cognito claims
-    claims: Dict[str, Any] = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
+    claims: Dict[str, Any] = (
+        event.get("requestContext", {})
+        .get("authorizer", {})
+        .get("claims", {})
+    )
     user_id: str = claims.get("sub", "")
 
     if method == "GET":

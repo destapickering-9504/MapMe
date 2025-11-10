@@ -4,8 +4,6 @@ import json
 from typing import Any, Dict
 from unittest.mock import MagicMock
 
-import pytest
-
 from index import handler
 
 
@@ -13,7 +11,9 @@ class TestUserHandler:
     """Test suite for user profile handler."""
 
     def test_handler_returns_user_info(
-        self, api_gateway_event: Dict[str, Any], lambda_context: MagicMock
+        self,
+        api_gateway_event: Dict[str, Any],
+        lambda_context: MagicMock,
     ) -> None:
         """Test that handler returns correct user information."""
         result = handler(api_gateway_event, lambda_context)
@@ -26,9 +26,14 @@ class TestUserHandler:
         assert body["email"] == "test@example.com"
         assert body["onboardingComplete"] is False
 
-    def test_handler_with_missing_claims(self, lambda_context: MagicMock) -> None:
+    def test_handler_with_missing_claims(
+        self,
+        lambda_context: MagicMock,
+    ) -> None:
         """Test handler behavior with missing user claims."""
-        event = {"requestContext": {"authorizer": {"claims": {}}}}
+        event = {
+            "requestContext": {"authorizer": {"claims": {}}}
+        }
 
         result = handler(event, lambda_context)
 
@@ -38,10 +43,13 @@ class TestUserHandler:
         assert body["email"] == ""
 
     def test_handler_with_name_claim(
-        self, api_gateway_event: Dict[str, Any], lambda_context: MagicMock
+        self,
+        api_gateway_event: Dict[str, Any],
+        lambda_context: MagicMock,
     ) -> None:
         """Test handler includes name when present in claims."""
-        api_gateway_event["requestContext"]["authorizer"]["claims"]["name"] = "Test User"
+        claims = api_gateway_event["requestContext"]["authorizer"]["claims"]
+        claims["name"] = "Test User"
 
         result = handler(api_gateway_event, lambda_context)
 
@@ -49,7 +57,9 @@ class TestUserHandler:
         assert body["name"] == "Test User"
 
     def test_handler_includes_cors_headers(
-        self, api_gateway_event: Dict[str, Any], lambda_context: MagicMock
+        self,
+        api_gateway_event: Dict[str, Any],
+        lambda_context: MagicMock,
     ) -> None:
         """Test that CORS headers are included in response."""
         result = handler(api_gateway_event, lambda_context)

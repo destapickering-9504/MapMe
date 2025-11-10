@@ -4,8 +4,6 @@ import json
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from index import handler, _handle_get_searches, _handle_post_search
 
 
@@ -73,7 +71,11 @@ class TestSearchesHandler:
         assert "error" in body
 
     @patch("index.ddb")
-    def test_get_searches_empty_result(self, mock_ddb: MagicMock, mock_env_vars: None) -> None:
+    def test_get_searches_empty_result(
+        self,
+        mock_ddb: MagicMock,
+        mock_env_vars: None,
+    ) -> None:
         """Test GET request with no search history."""
         mock_ddb.query.return_value = {"Items": []}
 
@@ -85,7 +87,9 @@ class TestSearchesHandler:
 
     @patch("index.ddb")
     def test_get_searches_calls_dynamodb_correctly(
-        self, mock_ddb: MagicMock, mock_env_vars: None
+        self,
+        mock_ddb: MagicMock,
+        mock_env_vars: None,
     ) -> None:
         """Test that DynamoDB query is called with correct parameters."""
         mock_ddb.query.return_value = {"Items": []}
@@ -100,7 +104,10 @@ class TestSearchesHandler:
     @patch("index.ddb")
     @patch("index.time.time")
     def test_post_search_creates_item(
-        self, mock_time: MagicMock, mock_ddb: MagicMock, mock_env_vars: None
+        self,
+        mock_time: MagicMock,
+        mock_ddb: MagicMock,
+        mock_env_vars: None,
     ) -> None:
         """Test POST creates search item with correct fields."""
         mock_time.return_value = 1234567890
@@ -109,7 +116,9 @@ class TestSearchesHandler:
         event = {
             "httpMethod": "POST",
             "body": json.dumps({"query": "test search"}),
-            "requestContext": {"authorizer": {"claims": {"sub": "user-123"}}},
+            "requestContext": {
+                "authorizer": {"claims": {"sub": "user-123"}}
+            },
         }
 
         result = _handle_post_search(event, "user-123")
@@ -121,14 +130,20 @@ class TestSearchesHandler:
         assert call_args["Item"]["userId"]["S"] == "user-123"
 
     @patch("index.ddb")
-    def test_post_search_with_empty_body(self, mock_ddb: MagicMock, mock_env_vars: None) -> None:
+    def test_post_search_with_empty_body(
+        self,
+        mock_ddb: MagicMock,
+        mock_env_vars: None,
+    ) -> None:
         """Test POST with empty body still creates entry."""
         mock_ddb.put_item.return_value = {}
 
         event = {
             "httpMethod": "POST",
             "body": None,
-            "requestContext": {"authorizer": {"claims": {"sub": "user-123"}}},
+            "requestContext": {
+                "authorizer": {"claims": {"sub": "user-123"}}
+            },
         }
 
         result = _handle_post_search(event, "user-123")
