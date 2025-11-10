@@ -50,19 +50,13 @@ jobs:
       - name: Terraform Plan
         working-directory: ${{ env.INFRA_DIR }}
         env:
-          TF_VAR_amplify_repo: ${{ secrets.TF_VAR_AMPLIFY_REPO }}
-          TF_VAR_amplify_access_token: ${{ secrets.TF_VAR_AMPLIFY_ACCESS_TOKEN }}
-          TF_VAR_app_callback_urls: ${{ secrets.TF_VAR_APP_CALLBACK_URLS }}
-          TF_VAR_app_logout_urls: ${{ secrets.TF_VAR_APP_LOGOUT_URLS }}
-          TF_VAR_google_client_id: ${{ secrets.TF_VAR_GOOGLE_CLIENT_ID }}
-          TF_VAR_google_client_secret: ${{ secrets.TF_VAR_GOOGLE_CLIENT_SECRET }}
-          TF_VAR_facebook_app_id: ${{ secrets.TF_VAR_FACEBOOK_APP_ID }}
-          TF_VAR_facebook_app_secret: ${{ secrets.TF_VAR_FACEBOOK_APP_SECRET }}
-          TF_VAR_apple_team_id: ${{ secrets.TF_VAR_APPLE_TEAM_ID }}
-          TF_VAR_apple_services_id: ${{ secrets.TF_VAR_APPLE_SERVICES_ID }}
-          TF_VAR_apple_key_id: ${{ secrets.TF_VAR_APPLE_KEY_ID }}
-          TF_VAR_apple_private_key_p8: ${{ secrets.TF_VAR_APPLE_PRIVATE_KEY_P8 }}
+          TF_VAR_app_callback_urls: ${{ secrets.TF_VAR_APP_CALLBACK_URLS != '' && secrets.TF_VAR_APP_CALLBACK_URLS || '' }}
+          TF_VAR_app_logout_urls: ${{ secrets.TF_VAR_APP_LOGOUT_URLS != '' && secrets.TF_VAR_APP_LOGOUT_URLS || '' }}
         run: |
+          # Only export non-empty environment variables to avoid overriding Terraform defaults
+          [ -n "$TF_VAR_app_callback_urls" ] && export TF_VAR_app_callback_urls || unset TF_VAR_app_callback_urls
+          [ -n "$TF_VAR_app_logout_urls" ] && export TF_VAR_app_logout_urls || unset TF_VAR_app_logout_urls
+          
           terraform plan -out=tfplan -input=false
           terraform show -no-color tfplan > plan.txt
 
@@ -197,19 +191,14 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ env.INFRA_DIR }}
         env:
-          TF_VAR_amplify_repo: ${{ secrets.TF_VAR_AMPLIFY_REPO }}
-          TF_VAR_amplify_access_token: ${{ secrets.TF_VAR_AMPLIFY_ACCESS_TOKEN }}
-          TF_VAR_app_callback_urls: ${{ secrets.TF_VAR_APP_CALLBACK_URLS }}
-          TF_VAR_app_logout_urls: ${{ secrets.TF_VAR_APP_LOGOUT_URLS }}
-          TF_VAR_google_client_id: ${{ secrets.TF_VAR_GOOGLE_CLIENT_ID }}
-          TF_VAR_google_client_secret: ${{ secrets.TF_VAR_GOOGLE_CLIENT_SECRET }}
-          TF_VAR_facebook_app_id: ${{ secrets.TF_VAR_FACEBOOK_APP_ID }}
-          TF_VAR_facebook_app_secret: ${{ secrets.TF_VAR_FACEBOOK_APP_SECRET }}
-          TF_VAR_apple_team_id: ${{ secrets.TF_VAR_APPLE_TEAM_ID }}
-          TF_VAR_apple_services_id: ${{ secrets.TF_VAR_APPLE_SERVICES_ID }}
-          TF_VAR_apple_key_id: ${{ secrets.TF_VAR_APPLE_KEY_ID }}
-          TF_VAR_apple_private_key_p8: ${{ secrets.TF_VAR_APPLE_PRIVATE_KEY_P8 }}
-        run: terraform apply -auto-approve tfplan
+          TF_VAR_app_callback_urls: ${{ secrets.TF_VAR_APP_CALLBACK_URLS != '' && secrets.TF_VAR_APP_CALLBACK_URLS || '' }}
+          TF_VAR_app_logout_urls: ${{ secrets.TF_VAR_APP_LOGOUT_URLS != '' && secrets.TF_VAR_APP_LOGOUT_URLS || '' }}
+        run: |
+          # Only export non-empty environment variables to avoid overriding Terraform defaults
+          [ -n "$TF_VAR_app_callback_urls" ] && export TF_VAR_app_callback_urls || unset TF_VAR_app_callback_urls
+          [ -n "$TF_VAR_app_logout_urls" ] && export TF_VAR_app_logout_urls || unset TF_VAR_app_logout_urls
+          
+          terraform apply -auto-approve tfplan
 
       - name: Get outputs
         working-directory: ${{ env.INFRA_DIR }}
