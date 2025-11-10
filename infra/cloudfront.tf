@@ -12,7 +12,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   is_ipv6_enabled     = true
   comment             = "MapMe Frontend Distribution"
   default_root_object = "index.html"
-  price_class         = "PriceClass_100"  # Use only North America and Europe
+  price_class         = "PriceClass_100" # Use only North America and Europe
 
   # S3 origin configuration
   origin {
@@ -41,8 +41,8 @@ resource "aws_cloudfront_distribution" "frontend" {
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 3600    # 1 hour
-    max_ttl                = 86400   # 24 hours
+    default_ttl            = 3600  # 1 hour
+    max_ttl                = 86400 # 24 hours
     compress               = true
 
     # Lambda@Edge functions can be added here for security headers

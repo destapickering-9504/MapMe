@@ -1,8 +1,8 @@
 resource "aws_cognito_user_pool" "this" {
   name = "${local.project}-user-pool"
 
-  username_attributes       = ["email"]
-  auto_verified_attributes  = ["email"]
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
 
   password_policy {
     minimum_length    = 8
@@ -21,14 +21,14 @@ resource "aws_cognito_user_pool" "this" {
 }
 
 resource "aws_cognito_user_pool_client" "web" {
-  name                                 = "${local.project}-web-client"
-  user_pool_id                         = aws_cognito_user_pool.this.id
-  generate_secret                      = false
-  prevent_user_existence_errors        = "ENABLED"
-  supported_identity_providers         = ["COGNITO"]  # Only email/password for now
+  name                          = "${local.project}-web-client"
+  user_pool_id                  = aws_cognito_user_pool.this.id
+  generate_secret               = false
+  prevent_user_existence_errors = "ENABLED"
+  supported_identity_providers  = ["COGNITO"] # Only email/password for now
 
-  callback_urls                        = var.app_callback_urls
-  logout_urls                          = var.app_logout_urls
+  callback_urls = var.app_callback_urls
+  logout_urls   = var.app_logout_urls
 
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["email", "openid", "profile"]

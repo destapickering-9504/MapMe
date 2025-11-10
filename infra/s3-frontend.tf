@@ -57,7 +57,7 @@ resource "aws_s3_bucket_cors_configuration" "frontend" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "HEAD"]
-    allowed_origins = ["*"]  # Tighten this in production
+    allowed_origins = ["*"] # Tighten this in production
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
@@ -83,6 +83,6 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 
   error_document {
-    key = "index.html"  # SPA routing - all routes serve index.html
+    key = "index.html" # SPA routing - all routes serve index.html
   }
 }

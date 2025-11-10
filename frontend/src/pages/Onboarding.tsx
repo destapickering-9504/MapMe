@@ -1,4 +1,3 @@
-import React from 'react'
 import AvatarUpload from '../components/AvatarUpload'
 import { useNavigate } from 'react-router-dom'
 

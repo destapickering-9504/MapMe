@@ -21,7 +21,7 @@
 
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "mapme-terraform-state-${random_string.suffix.result}"
-  
+
   tags = {
     Name        = "Terraform State Bucket"
     Environment = "Infrastructure"
@@ -31,7 +31,7 @@ resource "aws_s3_bucket" "terraform_state" {
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }

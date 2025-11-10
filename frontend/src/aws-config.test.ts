@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { cfg } from './aws-config'
 
 describe('AWS Configuration', () => {
   beforeEach(() => {
-    // Mock environment variables
-    import.meta.env.VITE_REGION = 'us-west-1'
-    import.meta.env.VITE_USER_POOL_ID = 'test-pool-id'
-    import.meta.env.VITE_USER_POOL_CLIENT_ID = 'test-client-id'
-    import.meta.env.VITE_IDENTITY_POOL_ID = 'test-identity-pool'
-    import.meta.env.VITE_AVATARS_BUCKET = 'test-avatars-bucket'
-    import.meta.env.VITE_API_BASE = 'https://api.test.com'
+    // Mock environment variables using vi.stubEnv
+    vi.stubEnv('VITE_REGION', 'us-west-1')
+    vi.stubEnv('VITE_USER_POOL_ID', 'test-pool-id')
+    vi.stubEnv('VITE_USER_POOL_CLIENT_ID', 'test-client-id')
+    vi.stubEnv('VITE_IDENTITY_POOL_ID', 'test-identity-pool')
+    vi.stubEnv('VITE_AVATARS_BUCKET', 'test-avatars-bucket')
+    vi.stubEnv('VITE_API_BASE', 'https://api.test.com')
   })
 
   it('exports configuration object', () => {

@@ -1,16 +1,19 @@
-import React, { useState, ChangeEvent } from 'react'
+import { useState, ChangeEvent } from 'react'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity'
-import { Auth } from 'aws-amplify'
+import { fetchAuthSession } from 'aws-amplify/auth'
 import { cfg } from '../aws-config'
 
 async function getS3(): Promise<S3Client> {
-  const session = await Auth.currentSession()
+  const session = await fetchAuthSession()
   const logins: Record<string, string> = {}
   
   // Map the Cognito User Pool as an identity provider for Identity Pool
-  const key = `cognito-idp.${cfg.region}.amazonaws.com/${cfg.userPoolId}`
-  logins[key] = session.getIdToken().getJwtToken()
+  const idToken = session.tokens?.idToken?.toString()
+  if (idToken) {
+    const key = `cognito-idp.${cfg.region}.amazonaws.com/${cfg.userPoolId}`
+    logins[key] = idToken
+  }
 
   const creds = fromCognitoIdentityPool({
     clientConfig: { region: cfg.region },
@@ -29,8 +32,8 @@ export default function AvatarUpload(): JSX.Element {
     if (!file) return
     
     try {
-      const session = await Auth.currentSession()
-      const sub = session.getIdToken().payload.sub
+      const session = await fetchAuthSession()
+      const sub = session.tokens?.idToken?.payload?.sub as string
       const s3 = await getS3()
       const key = `avatars/${sub}/${file.name}`
       

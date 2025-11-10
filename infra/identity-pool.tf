@@ -44,8 +44,8 @@ data "aws_iam_policy_document" "auth_policy_doc" {
   }
 
   statement {
-    sid     = "ListOwnPrefix"
-    actions = ["s3:ListBucket"]
+    sid       = "ListOwnPrefix"
+    actions   = ["s3:ListBucket"]
     resources = [aws_s3_bucket.avatars.arn]
     condition {
       test     = "StringLike"

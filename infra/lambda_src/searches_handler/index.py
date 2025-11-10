@@ -7,9 +7,11 @@ from typing import Any, Dict, List
 
 import boto3
 
-# Initialize DynamoDB client
-ddb = boto3.client("dynamodb")
-TABLE = os.environ["SEARCHES_TABLE"]
+
+def get_ddb_table():
+    ddb = boto3.client("dynamodb")
+    table = os.environ["SEARCHES_TABLE"]
+    return ddb, table
 
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -29,11 +31,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get("httpMethod", "")
 
     # Extract user ID from Cognito claims
-    claims: Dict[str, Any] = (
-        event.get("requestContext", {})
-        .get("authorizer", {})
-        .get("claims", {})
-    )
+    claims: Dict[str, Any] = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
     user_id: str = claims.get("sub", "")
 
     if method == "GET":
@@ -58,8 +56,9 @@ def _handle_get_searches(user_id: str) -> Dict[str, Any]:
     Returns:
         API Gateway response with list of searches
     """
+    ddb, table = get_ddb_table()
     response = ddb.query(
-        TableName=TABLE,
+        TableName=table,
         KeyConditions={
             "userId": {
                 "AttributeValueList": [{"S": user_id}],
@@ -110,7 +109,8 @@ def _handle_post_search(event: Dict[str, Any], user_id: str) -> Dict[str, Any]:
         "query": {"S": query},
     }
 
-    ddb.put_item(TableName=TABLE, Item=item)
+    ddb, table = get_ddb_table()
+    ddb.put_item(TableName=table, Item=item)
 
     return {
         "statusCode": 201,

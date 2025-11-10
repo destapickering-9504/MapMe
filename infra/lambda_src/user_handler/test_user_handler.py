@@ -4,7 +4,7 @@ import json
 from typing import Any, Dict
 from unittest.mock import MagicMock
 
-from index import handler
+from .index import handler
 
 
 class TestUserHandler:
@@ -31,9 +31,7 @@ class TestUserHandler:
         lambda_context: MagicMock,
     ) -> None:
         """Test handler behavior with missing user claims."""
-        event = {
-            "requestContext": {"authorizer": {"claims": {}}}
-        }
+        event = {"requestContext": {"authorizer": {"claims": {}}}}
 
         result = handler(event, lambda_context)
 

@@ -1,5 +1,5 @@
-import React, { useState, ChangeEvent } from 'react'
-import { Auth } from 'aws-amplify'
+import { useState, ChangeEvent } from 'react'
+import { signUp, confirmSignUp } from 'aws-amplify/auth'
 
 type Phase = 'signup' | 'confirm'
 
@@ -10,12 +10,12 @@ export default function SignUp(): JSX.Element {
   const [phase, setPhase] = useState<Phase>('signup')
 
   const doSignUp = async (): Promise<void> => {
-    await Auth.signUp({ username: email, password, attributes: { email } })
+    await signUp({ username: email, password, options: { userAttributes: { email } } })
     setPhase('confirm')
   }
 
   const doConfirm = async (): Promise<void> => {
-    await Auth.confirmSignUp(email, code)
+    await confirmSignUp({ username: email, confirmationCode: code })
     window.location.assign('/signin')
   }
 

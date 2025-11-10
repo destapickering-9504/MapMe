@@ -92,13 +92,13 @@ resource "aws_lambda_permission" "apigw_searches" {
 
 resource "aws_api_gateway_deployment" "deploy" {
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
-  
+
   depends_on = [
     aws_api_gateway_integration.user_get,
     aws_api_gateway_integration.searches_get,
     aws_api_gateway_integration.searches_post,
   ]
-  
+
   triggers = {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.user_res.id,
@@ -111,7 +111,7 @@ resource "aws_api_gateway_deployment" "deploy" {
       aws_api_gateway_integration.searches_post.id,
     ]))
   }
-  
+
   lifecycle { create_before_destroy = true }
 }
 

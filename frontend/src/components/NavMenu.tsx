@@ -1,13 +1,12 @@
-import React from 'react'
-import { Auth } from 'aws-amplify'
+import { signOut } from 'aws-amplify/auth'
 import { useNavigate } from 'react-router-dom'
 
 export default function NavMenu(): JSX.Element {
   const navigate = useNavigate()
   
-  const signOut = async (): Promise<void> => {
+  const handleSignOut = async (): Promise<void> => {
     try {
-      await Auth.signOut()
+      await signOut()
     } finally {
       navigate('/signin')
     }
@@ -23,7 +22,7 @@ export default function NavMenu(): JSX.Element {
       }}
     >
       <div style={{ position: 'relative' }}>
-        <button onClick={signOut}>Sign out</button>
+        <button onClick={handleSignOut}>Sign out</button>
       </div>
     </div>
   )

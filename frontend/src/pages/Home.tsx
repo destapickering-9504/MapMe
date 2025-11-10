@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { fetchAuthSession } from 'aws-amplify/auth'
 import { cfg } from '../aws-config'
-import { Auth } from 'aws-amplify'
 
 interface Search {
   userId: string;
@@ -13,8 +13,8 @@ interface ApiOptions extends RequestInit {
 }
 
 async function api(path: string, opts: ApiOptions = {}): Promise<any> {
-  const session = await Auth.currentSession()
-  const token = session.getIdToken().getJwtToken()
+  const session = await fetchAuthSession()
+  const token = session.tokens?.idToken?.toString() || ''
   
   const res = await fetch(`${cfg.apiBase}${path}`, {
     ...opts,

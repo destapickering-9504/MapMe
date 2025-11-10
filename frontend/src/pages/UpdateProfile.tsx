@@ -1,4 +1,3 @@
-import React from 'react'
 import Onboarding from './Onboarding'
 
 export default function UpdateProfile(): JSX.Element {
