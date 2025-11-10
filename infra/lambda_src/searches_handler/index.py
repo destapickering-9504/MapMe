@@ -15,23 +15,21 @@ TABLE = os.environ["SEARCHES_TABLE"]
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Handle GET and POST requests for /searches endpoint.
-    
+
     GET: Returns user's search history (up to 20 most recent searches)
     POST: Creates a new search entry
-    
+
     Args:
         event: API Gateway event containing HTTP method and user claims
         context: Lambda context object
-        
+
     Returns:
         API Gateway response with search data or success confirmation
     """
     method: str = event.get("httpMethod", "")
-    
+
     # Extract user ID from Cognito claims
-    claims: Dict[str, Any] = (
-        event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
-    )
+    claims: Dict[str, Any] = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
     user_id: str = claims.get("sub", "")
 
     if method == "GET":
@@ -49,10 +47,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 def _handle_get_searches(user_id: str) -> Dict[str, Any]:
     """
     Retrieve user's search history from DynamoDB.
-    
+
     Args:
         user_id: The authenticated user's ID
-        
+
     Returns:
         API Gateway response with list of searches
     """
@@ -87,17 +85,17 @@ def _handle_get_searches(user_id: str) -> Dict[str, Any]:
 def _handle_post_search(event: Dict[str, Any], user_id: str) -> Dict[str, Any]:
     """
     Create a new search entry in DynamoDB.
-    
+
     Args:
         event: API Gateway event containing request body
         user_id: The authenticated user's ID
-        
+
     Returns:
         API Gateway response confirming creation
     """
     body: Dict[str, Any] = json.loads(event.get("body") or "{}")
     query: str = body.get("query", "")
-    
+
     # Create timestamp
     timestamp: str = str(int(time.time()))
 

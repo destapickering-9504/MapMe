@@ -73,9 +73,7 @@ class TestSearchesHandler:
         assert "error" in body
 
     @patch("index.ddb")
-    def test_get_searches_empty_result(
-        self, mock_ddb: MagicMock, mock_env_vars: None
-    ) -> None:
+    def test_get_searches_empty_result(self, mock_ddb: MagicMock, mock_env_vars: None) -> None:
         """Test GET request with no search history."""
         mock_ddb.query.return_value = {"Items": []}
 
@@ -111,9 +109,7 @@ class TestSearchesHandler:
         event = {
             "httpMethod": "POST",
             "body": json.dumps({"query": "test search"}),
-            "requestContext": {
-                "authorizer": {"claims": {"sub": "user-123"}}
-            },
+            "requestContext": {"authorizer": {"claims": {"sub": "user-123"}}},
         }
 
         result = _handle_post_search(event, "user-123")
@@ -125,18 +121,14 @@ class TestSearchesHandler:
         assert call_args["Item"]["userId"]["S"] == "user-123"
 
     @patch("index.ddb")
-    def test_post_search_with_empty_body(
-        self, mock_ddb: MagicMock, mock_env_vars: None
-    ) -> None:
+    def test_post_search_with_empty_body(self, mock_ddb: MagicMock, mock_env_vars: None) -> None:
         """Test POST with empty body still creates entry."""
         mock_ddb.put_item.return_value = {}
 
         event = {
             "httpMethod": "POST",
             "body": None,
-            "requestContext": {
-                "authorizer": {"claims": {"sub": "user-123"}}
-            },
+            "requestContext": {"authorizer": {"claims": {"sub": "user-123"}}},
         }
 
         result = _handle_post_search(event, "user-123")
