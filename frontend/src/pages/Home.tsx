@@ -12,7 +12,7 @@ interface ApiOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
-async function api(path: string, opts: ApiOptions = {}): Promise<any> {
+async function api<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T> {
   const session = await fetchAuthSession()
   const token = session.tokens?.idToken?.toString() || ''
   
@@ -32,17 +32,17 @@ export default function Home(): JSX.Element {
   const [searches, setSearches] = useState<Search[]>([])
   
   useEffect(() => {
-    api('/searches', { method: 'GET' })
+    api<Search[]>('/searches', { method: 'GET' })
       .then(setSearches)
       .catch(console.error)
   }, [])
 
   const add = async (): Promise<void> => {
-    await api('/searches', {
+    await api<{ ok: boolean }>('/searches', {
       method: 'POST',
       body: JSON.stringify({ query: 'Near me' }),
     })
-    const updated = await api('/searches', { method: 'GET' })
+    const updated = await api<Search[]>('/searches', { method: 'GET' })
     setSearches(updated)
   }
 

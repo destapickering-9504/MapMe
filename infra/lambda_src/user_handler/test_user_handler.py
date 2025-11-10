@@ -31,7 +31,7 @@ class TestUserHandler:
         lambda_context: MagicMock,
     ) -> None:
         """Test handler behavior with missing user claims."""
-        event = {"requestContext": {"authorizer": {"claims": {}}}}
+        event: Dict[str, Any] = {"requestContext": {"authorizer": {"claims": {}}}}
 
         result = handler(event, lambda_context)
 

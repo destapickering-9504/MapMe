@@ -3,12 +3,12 @@
 import json
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import boto3
 
 
-def get_ddb_table():
+def get_ddb_table() -> Tuple[Any, str]:
     ddb = boto3.client("dynamodb")
     table = os.environ["SEARCHES_TABLE"]
     return ddb, table
