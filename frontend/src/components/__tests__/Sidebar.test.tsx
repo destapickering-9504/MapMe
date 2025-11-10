@@ -10,7 +10,7 @@ describe('Sidebar Component', () => {
         <Sidebar />
       </BrowserRouter>
     )
-    
+
     expect(screen.getByText('MapMe')).toBeInTheDocument()
   })
 
@@ -20,7 +20,7 @@ describe('Sidebar Component', () => {
         <Sidebar />
       </BrowserRouter>
     )
-    
+
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Update info')).toBeInTheDocument()
     expect(screen.getByText('New search')).toBeInTheDocument()
@@ -33,7 +33,7 @@ describe('Sidebar Component', () => {
         <Sidebar />
       </BrowserRouter>
     )
-    
+
     const homeLink = screen.getByText('Home').closest('a')
     expect(homeLink).toHaveAttribute('href', '/home')
   })

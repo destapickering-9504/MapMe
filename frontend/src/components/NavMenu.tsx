@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function NavMenu(): JSX.Element {
   const navigate = useNavigate()
-  
+
   const handleSignOut = async (): Promise<void> => {
     try {
       await signOut()
@@ -11,7 +11,7 @@ export default function NavMenu(): JSX.Element {
       navigate('/signin')
     }
   }
-  
+
   return (
     <div
       style={{

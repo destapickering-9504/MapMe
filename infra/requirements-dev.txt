@@ -21,5 +21,5 @@ types-requests==2.32.0.20241016
 safety==3.2.8
 
 # AWS Testing
-moto==5.0.18  # Mock AWS services for testing
-boto3-stubs[dynamodb,lambda,s3]==1.35.36
+moto==5.0.18  # Mock AWS services for testing (without [all] extras to avoid conflicts)
+boto3-stubs[dynamodb,lambda,s3]  # Type stubs for boto3

@@ -7,7 +7,7 @@ import { cfg } from '../aws-config'
 async function getS3(): Promise<S3Client> {
   const session = await fetchAuthSession()
   const logins: Record<string, string> = {}
-  
+
   // Map the Cognito User Pool as an identity provider for Identity Pool
   const idToken = session.tokens?.idToken?.toString()
   if (idToken) {
@@ -20,7 +20,7 @@ async function getS3(): Promise<S3Client> {
     identityPoolId: cfg.identityPoolId,
     logins,
   })
-  
+
   return new S3Client({ region: cfg.region, credentials: creds })
 }
 
@@ -30,13 +30,13 @@ export default function AvatarUpload(): JSX.Element {
 
   const upload = async (): Promise<void> => {
     if (!file) return
-    
+
     try {
       const session = await fetchAuthSession()
       const sub = session.tokens?.idToken?.payload?.sub as string
       const s3 = await getS3()
       const key = `avatars/${sub}/${file.name}`
-      
+
       await s3.send(
         new PutObjectCommand({
           Bucket: cfg.avatarsBucket,
@@ -45,7 +45,7 @@ export default function AvatarUpload(): JSX.Element {
           ContentType: file.type,
         })
       )
-      
+
       setMessage('Uploaded: ' + key)
     } catch (e) {
       console.error(e)

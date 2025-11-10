@@ -5,7 +5,7 @@ export default function SignIn(): JSX.Element {
     // Send user to Hosted UI (supports Google/Facebook/Apple)
     signInWithRedirect()
   }
-  
+
   return (
     <div>
       <h2>Sign in to MapMe</h2>

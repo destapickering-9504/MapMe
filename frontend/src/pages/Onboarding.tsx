@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Onboarding(): JSX.Element {
   const navigate = useNavigate()
-  
+
   return (
     <div>
       <h2>Welcome! Onboarding</h2>

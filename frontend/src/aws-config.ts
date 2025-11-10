@@ -3,12 +3,12 @@
  */
 
 export interface AWSConfig {
-  region: string;
-  userPoolId: string;
-  userPoolClientId: string;
-  identityPoolId: string;
-  avatarsBucket: string;
-  apiBase: string;
+  region: string
+  userPoolId: string
+  userPoolClientId: string
+  identityPoolId: string
+  avatarsBucket: string
+  apiBase: string
 }
 
 export const cfg: AWSConfig = {
@@ -18,4 +18,4 @@ export const cfg: AWSConfig = {
   identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID || '',
   avatarsBucket: import.meta.env.VITE_AVATARS_BUCKET || '',
   apiBase: import.meta.env.VITE_API_BASE || '',
-};
+}

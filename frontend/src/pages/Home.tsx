@@ -3,19 +3,19 @@ import { fetchAuthSession } from 'aws-amplify/auth'
 import { cfg } from '../aws-config'
 
 interface Search {
-  userId: string;
-  createdAt: string;
-  query: string;
+  userId: string
+  createdAt: string
+  query: string
 }
 
 interface ApiOptions extends RequestInit {
-  headers?: Record<string, string>;
+  headers?: Record<string, string>
 }
 
 async function api<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T> {
   const session = await fetchAuthSession()
   const token = session.tokens?.idToken?.toString() || ''
-  
+
   const res = await fetch(`${cfg.apiBase}${path}`, {
     ...opts,
     headers: {
@@ -24,17 +24,15 @@ async function api<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T>
       ...(opts.headers || {}),
     },
   })
-  
+
   return res.json()
 }
 
 export default function Home(): JSX.Element {
   const [searches, setSearches] = useState<Search[]>([])
-  
+
   useEffect(() => {
-    api<Search[]>('/searches', { method: 'GET' })
-      .then(setSearches)
-      .catch(console.error)
+    api<Search[]>('/searches', { method: 'GET' }).then(setSearches).catch(console.error)
   }, [])
 
   const add = async (): Promise<void> => {
