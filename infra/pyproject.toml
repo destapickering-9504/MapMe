@@ -1,0 +1,56 @@
+[tool.black]
+# Black Configuration for Python Code Formatting
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | \.terraform
+)/
+'''
+
+[tool.mypy]
+# Mypy Configuration for Type Checking
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+ignore_missing_imports = true
+strict_optional = true
+pretty = true
+show_error_codes = true
+show_error_context = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+
+[tool.pytest.ini_options]
+# Additional pytest configuration (supplements pytest.ini)
+minversion = "8.0"
+pythonpath = [
+  "."
+]

@@ -1,0 +1,25 @@
+# Development Dependencies for Backend Testing and Code Quality
+
+# Testing Framework
+pytest==8.3.3
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+
+# Code Formatting
+black==24.10.0
+
+# Linting
+flake8==7.1.1
+flake8-docstrings==1.7.0
+flake8-bugbear==24.10.31
+
+# Type Checking
+mypy==1.13.0
+types-requests==2.32.0.20241016
+
+# Security Scanning
+safety==3.2.8
+
+# AWS Testing
+moto==5.0.18  # Mock AWS services for testing
+boto3-stubs[dynamodb,lambda,s3]==1.35.36
