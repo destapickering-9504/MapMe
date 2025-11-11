@@ -1,13 +1,28 @@
 # S3 Bucket for Frontend Static Website Hosting
 # This replaces AWS Amplify for more control over deployment
 
+# Create a separate random suffix for frontend bucket
+resource "random_string" "frontend_suffix" {
+  length  = 6
+  upper   = false
+  special = false
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
 resource "aws_s3_bucket" "frontend" {
-  bucket = "mapme-frontend-${random_string.suffix.result}"
+  bucket = "mapme-frontend-${random_string.frontend_suffix.result}"
 
   tags = {
     Name        = "MapMe Frontend"
     Environment = "Production"
     Project     = "MapMe"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
