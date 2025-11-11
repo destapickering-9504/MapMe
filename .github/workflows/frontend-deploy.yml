@@ -29,7 +29,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ env.FRONTEND_DIR }}
-        run: npm ci
+        run: npm install
 
       - name: Type check
         working-directory: ${{ env.FRONTEND_DIR }}
