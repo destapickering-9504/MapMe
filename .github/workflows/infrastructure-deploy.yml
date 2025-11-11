@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - qa
     paths:
       - 'infra/**'
       - '.github/workflows/infrastructure-deploy.yml'
@@ -35,6 +36,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/qa" ]]; then
+            echo "ENVIRONMENT=qa" >> $GITHUB_ENV
+            echo "environment=qa" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+          echo "Deploying to environment: $ENVIRONMENT"
+
       - name: Terraform Format Check
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform fmt -check -recursive
@@ -43,21 +59,21 @@ jobs:
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform init
 
+      - name: Select or create Terraform workspace
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          echo "Using Terraform workspace: ${{ env.ENVIRONMENT }}"
+
       - name: Terraform Validate
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform validate
 
       - name: Terraform Plan
         working-directory: ${{ env.INFRA_DIR }}
-        env:
-          TF_VAR_app_callback_urls: ${{ secrets.TF_VAR_APP_CALLBACK_URLS != '' && secrets.TF_VAR_APP_CALLBACK_URLS || '' }}
-          TF_VAR_app_logout_urls: ${{ secrets.TF_VAR_APP_LOGOUT_URLS != '' && secrets.TF_VAR_APP_LOGOUT_URLS || '' }}
         run: |
-          # Only export non-empty environment variables to avoid overriding Terraform defaults
-          [ -n "$TF_VAR_app_callback_urls" ] && export TF_VAR_app_callback_urls || unset TF_VAR_app_callback_urls
-          [ -n "$TF_VAR_app_logout_urls" ] && export TF_VAR_app_logout_urls || unset TF_VAR_app_logout_urls
-          
-          terraform plan -out=tfplan -input=false
+          echo "Planning for environment: ${{ env.ENVIRONMENT }}"
+          terraform plan -var-file="${{ env.ENVIRONMENT }}.tfvars" -out=tfplan -input=false
           terraform show -no-color tfplan > plan.txt
 
       - name: Upload plan and Lambda ZIPs
@@ -162,7 +178,7 @@ jobs:
     name: Terraform Apply
     needs: [validate-and-plan, test-backend, security-scan]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa'
     
     steps:
       - name: Checkout code
@@ -180,6 +196,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set environment based on branch
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/qa" ]]; then
+            echo "ENVIRONMENT=qa" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          fi
+          echo "Deploying to environment: $ENVIRONMENT"
+
       - name: Download plan
         uses: actions/download-artifact@v4
         with:
@@ -190,23 +217,24 @@ jobs:
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform init
 
+      - name: Select or create Terraform workspace
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          echo "Using Terraform workspace: ${{ env.ENVIRONMENT }}"
+
       - name: Terraform Apply
         working-directory: ${{ env.INFRA_DIR }}
-        env:
-          TF_VAR_app_callback_urls: ${{ secrets.TF_VAR_APP_CALLBACK_URLS != '' && secrets.TF_VAR_APP_CALLBACK_URLS || '' }}
-          TF_VAR_app_logout_urls: ${{ secrets.TF_VAR_APP_LOGOUT_URLS != '' && secrets.TF_VAR_APP_LOGOUT_URLS || '' }}
         run: |
-          # Only export non-empty environment variables to avoid overriding Terraform defaults
-          [ -n "$TF_VAR_app_callback_urls" ] && export TF_VAR_app_callback_urls || unset TF_VAR_app_callback_urls
-          [ -n "$TF_VAR_app_logout_urls" ] && export TF_VAR_app_logout_urls || unset TF_VAR_app_logout_urls
-          
+          echo "Applying for environment: ${{ env.ENVIRONMENT }}"
           terraform apply -auto-approve tfplan
 
       - name: Get outputs
         working-directory: ${{ env.INFRA_DIR }}
         run: |
-          echo "## 🚀 Infrastructure Deployed!" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Infrastructure Deployed to ${{ env.ENVIRONMENT }}!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment: \`${{ env.ENVIRONMENT }}\`" >> $GITHUB_STEP_SUMMARY
           echo "### Terraform Outputs:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           terraform output >> $GITHUB_STEP_SUMMARY

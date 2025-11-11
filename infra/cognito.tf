@@ -1,5 +1,5 @@
 resource "aws_cognito_user_pool" "this" {
-  name = "${local.project}-user-pool"
+  name = "${local.name_prefix}-user-pool"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
@@ -18,10 +18,12 @@ resource "aws_cognito_user_pool" "this" {
     mutable             = true
     required            = false
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_cognito_user_pool_client" "web" {
-  name                          = "${local.project}-web-client"
+  name                          = "${local.name_prefix}-web-client"
   user_pool_id                  = aws_cognito_user_pool.this.id
   generate_secret               = false
   prevent_user_existence_errors = "ENABLED"
@@ -37,6 +39,6 @@ resource "aws_cognito_user_pool_client" "web" {
 }
 
 resource "aws_cognito_user_pool_domain" "domain" {
-  domain       = var.cognito_domain_prefix != "" ? var.cognito_domain_prefix : "${local.project}-${local.suffix}"
+  domain       = var.cognito_domain_prefix != "" ? var.cognito_domain_prefix : "${local.name_prefix}-${local.suffix}"
   user_pool_id = aws_cognito_user_pool.this.id
 }

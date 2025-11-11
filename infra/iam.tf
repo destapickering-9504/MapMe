@@ -9,8 +9,9 @@ data "aws_iam_policy_document" "lambda_assume" {
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name               = "${local.project}-lambda-role-${local.suffix}"
+  name               = "${local.name_prefix}-lambda-role-${local.suffix}"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  tags               = local.common_tags
 }
 
 data "aws_iam_policy_document" "lambda_policy_doc" {
@@ -29,8 +30,9 @@ data "aws_iam_policy_document" "lambda_policy_doc" {
 }
 
 resource "aws_iam_policy" "lambda_policy" {
-  name   = "${local.project}-lambda-policy-${local.suffix}"
+  name   = "${local.name_prefix}-lambda-policy-${local.suffix}"
   policy = data.aws_iam_policy_document.lambda_policy_doc.json
+  tags   = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_attach" {

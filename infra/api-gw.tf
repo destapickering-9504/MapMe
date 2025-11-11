@@ -1,6 +1,8 @@
 resource "aws_api_gateway_rest_api" "rest_api" {
-  name        = "${local.project}-api"
-  description = "MapMe REST API"
+  name        = "${local.name_prefix}-api"
+  description = "MapMe REST API - ${title(local.environment)} Environment"
+  
+  tags = local.common_tags
 }
 
 resource "aws_api_gateway_resource" "user_res" {
@@ -16,7 +18,7 @@ resource "aws_api_gateway_resource" "searches_res" {
 }
 
 resource "aws_api_gateway_authorizer" "cognito" {
-  name            = "cognito-authorizer"
+  name            = "${local.name_prefix}-cognito-authorizer"
   rest_api_id     = aws_api_gateway_rest_api.rest_api.id
   type            = "COGNITO_USER_POOLS"
   provider_arns   = [aws_cognito_user_pool.this.arn]
@@ -119,4 +121,6 @@ resource "aws_api_gateway_stage" "stage" {
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   deployment_id = aws_api_gateway_deployment.deploy.id
   stage_name    = local.environment
+  
+  tags = local.common_tags
 }

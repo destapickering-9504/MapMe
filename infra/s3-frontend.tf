@@ -13,13 +13,14 @@ resource "random_string" "frontend_suffix" {
 }
 
 resource "aws_s3_bucket" "frontend" {
-  bucket = "mapme-frontend-${random_string.frontend_suffix.result}"
+  bucket = "${local.name_prefix}-frontend-${random_string.frontend_suffix.result}"
 
-  tags = {
-    Name        = "MapMe Frontend"
-    Environment = "Production"
-    Project     = "MapMe"
-  }
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.name_prefix}-frontend"
+    }
+  )
 
   lifecycle {
     prevent_destroy = true

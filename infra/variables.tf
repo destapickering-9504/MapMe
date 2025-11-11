@@ -1,3 +1,12 @@
+variable "environment" {
+  description = "Environment name (dev, qa, prod)"
+  type        = string
+  validation {
+    condition     = contains(["dev", "qa", "prod"], var.environment)
+    error_message = "Environment must be dev, qa, or prod."
+  }
+}
+
 variable "aws_region" {
   description = "AWS region for deployment (configurable via TF_VAR_aws_region environment variable)"
   type        = string

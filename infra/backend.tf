@@ -20,7 +20,7 @@
 # Run this ONCE before migrating to remote backend
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "mapme-terraform-state-${random_string.suffix.result}"
+  bucket = "${local.name_prefix}-terraform-state-${random_string.suffix.result}"
 
   tags = {
     Name        = "Terraform State Bucket"
@@ -61,7 +61,7 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
 }
 
 resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "mapme-terraform-locks-${random_string.suffix.result}"
+  name         = "${local.name_prefix}-terraform-locks-${random_string.suffix.result}"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
 

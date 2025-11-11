@@ -1,5 +1,5 @@
 resource "aws_cognito_identity_pool" "this" {
-  identity_pool_name               = "${local.project}-identity-pool"
+  identity_pool_name               = "${local.name_prefix}-identity-pool"
   allow_unauthenticated_identities = false
 
   cognito_identity_providers {
@@ -7,6 +7,8 @@ resource "aws_cognito_identity_pool" "this" {
     provider_name           = aws_cognito_user_pool.this.endpoint
     server_side_token_check = true
   }
+
+  tags = local.common_tags
 }
 
 data "aws_iam_policy_document" "auth_assume" {
@@ -30,8 +32,9 @@ data "aws_iam_policy_document" "auth_assume" {
 }
 
 resource "aws_iam_role" "auth_role" {
-  name               = "${local.project}-auth-role-${local.suffix}"
+  name               = "${local.name_prefix}-auth-role-${local.suffix}"
   assume_role_policy = data.aws_iam_policy_document.auth_assume.json
+  tags               = local.common_tags
 }
 
 data "aws_iam_policy_document" "auth_policy_doc" {
@@ -62,8 +65,9 @@ data "aws_iam_policy_document" "auth_policy_doc" {
 }
 
 resource "aws_iam_policy" "auth_policy" {
-  name   = "${local.project}-auth-policy-${local.suffix}"
+  name   = "${local.name_prefix}-auth-policy-${local.suffix}"
   policy = data.aws_iam_policy_document.auth_policy_doc.json
+  tags   = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "attach_auth" {

@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "users" {
-  name         = "${local.project}-users"
+  name         = "${local.name_prefix}-users"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "userId"
 
@@ -8,13 +8,15 @@ resource "aws_dynamodb_table" "users" {
     type = "S"
   }
 
+  tags = local.common_tags
+
   lifecycle {
     prevent_destroy = true
   }
 }
 
 resource "aws_dynamodb_table" "searches" {
-  name         = "${local.project}-searches"
+  name         = "${local.name_prefix}-searches"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "userId"
   range_key    = "createdAt"
@@ -35,6 +37,8 @@ resource "aws_dynamodb_table" "searches" {
     range_key       = "createdAt"
     projection_type = "ALL"
   }
+
+  tags = local.common_tags
 
   lifecycle {
     prevent_destroy = true

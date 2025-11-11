@@ -3,14 +3,14 @@
 
 # Origin Access Identity for secure S3 access
 resource "aws_cloudfront_origin_access_identity" "frontend" {
-  comment = "OAI for MapMe Frontend S3 bucket"
+  comment = "OAI for ${local.name_prefix} Frontend S3 bucket"
 }
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "MapMe Frontend Distribution"
+  comment             = "${local.name_prefix} Frontend Distribution"
   default_root_object = "index.html"
   price_class         = "PriceClass_100" # Use only North America and Europe
 
@@ -44,8 +44,6 @@ resource "aws_cloudfront_distribution" "frontend" {
     default_ttl            = 3600  # 1 hour
     max_ttl                = 86400 # 24 hours
     compress               = true
-
-    # Lambda@Edge functions can be added here for security headers
   }
 
   # Custom error responses for SPA routing
@@ -77,16 +75,15 @@ resource "aws_cloudfront_distribution" "frontend" {
     # minimum_protocol_version = "TLSv1.2_2021"
   }
 
-  tags = {
-    Name        = "MapMe Frontend Distribution"
-    Environment = "Production"
-    Project     = "MapMe"
-  }
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.name_prefix}-cloudfront"
+    }
+  )
 }
 
-# Optional: Uncomment to add custom domain support
 # Requires ACM certificate in us-east-1 region
-/*
 resource "aws_acm_certificate" "frontend" {
   provider                  = aws.us_east_1  # CloudFront requires us-east-1
   domain_name              = var.frontend_domain
@@ -97,19 +94,17 @@ resource "aws_acm_certificate" "frontend" {
     create_before_destroy = true
   }
 
-  tags = {
-    Name        = "MapMe Frontend Certificate"
-    Environment = "Production"
-    Project     = "MapMe"
-  }
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.name_prefix}-frontend-certificate"
+    }
+  )
 }
 
 # Add to cloudfront_distribution:
 # aliases = [var.frontend_domain, "www.${var.frontend_domain}"]
-*/
 
-# Optional: Uncomment to add Route53 DNS
-/*
 resource "aws_route53_record" "frontend" {
   zone_id = var.route53_zone_id
   name    = var.frontend_domain
@@ -133,4 +128,3 @@ resource "aws_route53_record" "frontend_www" {
     evaluate_target_health = false
   }
 }
-*/

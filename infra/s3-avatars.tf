@@ -1,6 +1,13 @@
 resource "aws_s3_bucket" "avatars" {
   bucket = local.avatars_bucket_name
 
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.name_prefix}-avatars"
+    }
+  )
+
   lifecycle {
     prevent_destroy = true
   }
