@@ -1,5 +1,9 @@
 resource "aws_s3_bucket" "avatars" {
   bucket = local.avatars_bucket_name
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_ownership_controls" "avatars" {

@@ -7,6 +7,10 @@ resource "aws_dynamodb_table" "users" {
     name = "userId"
     type = "S"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_dynamodb_table" "searches" {
@@ -30,5 +34,9 @@ resource "aws_dynamodb_table" "searches" {
     hash_key        = "userId"
     range_key       = "createdAt"
     projection_type = "ALL"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }

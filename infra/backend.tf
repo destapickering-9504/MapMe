@@ -27,6 +27,10 @@ resource "aws_s3_bucket" "terraform_state" {
     Environment = "Infrastructure"
     Project     = "MapMe"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -70,6 +74,10 @@ resource "aws_dynamodb_table" "terraform_locks" {
     Name        = "Terraform State Lock Table"
     Environment = "Infrastructure"
     Project     = "MapMe"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
