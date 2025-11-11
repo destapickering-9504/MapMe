@@ -90,8 +90,6 @@ htmlcov/
 
 # AWS
 .aws-sam/
-.husky/*
-.github/workflows/*
 
 # Misc
 .cache/
@@ -101,6 +99,3 @@ temp/
 
 # Husky
 .husky/*
-
-# GitHub workflows
-.github/workflows/*
