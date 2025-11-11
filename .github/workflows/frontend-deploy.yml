@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - qa
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-deploy.yml'

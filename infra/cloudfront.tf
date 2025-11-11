@@ -82,10 +82,10 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   )
 }
-
+/*
 # Requires ACM certificate in us-east-1 region
 resource "aws_acm_certificate" "frontend" {
-  provider                  = aws.us_east_1  # CloudFront requires us-east-1
+  provider                  = aws.us_east_1
   domain_name              = var.frontend_domain
   subject_alternative_names = ["www.${var.frontend_domain}"]
   validation_method        = "DNS"
@@ -128,3 +128,4 @@ resource "aws_route53_record" "frontend_www" {
     evaluate_target_health = false
   }
 }
+*/
