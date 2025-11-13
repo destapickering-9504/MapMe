@@ -15,11 +15,14 @@ flake8-bugbear==24.10.31
 
 # Type Checking
 mypy==1.13.0
-types-requests==2.32.0.20241016
+# types-requests removed due to urllib3 conflict with botocore on Python 3.9
+# If type hints for requests are needed, upgrade to Python 3.10+ or use boto3 1.26+
 
 # Security Scanning
 safety==3.2.8
 
 # AWS Testing
+boto3==1.35.36  # AWS SDK - pinned to match boto3-stubs version
+botocore==1.35.36  # AWS SDK core - pinned to match boto3 version
 moto==5.0.18  # Mock AWS services for testing (without [all] extras to avoid conflicts)
-boto3-stubs[dynamodb,lambda,s3]  # Type stubs for boto3
+boto3-stubs[dynamodb,lambda,s3]==1.35.36  # Type stubs for boto3

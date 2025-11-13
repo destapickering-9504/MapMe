@@ -67,9 +67,7 @@ export default function SignUp(): JSX.Element {
                         className="form-control form-control-lg"
                         placeholder="Enter your password"
                         value={password}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          setPassword(e.target.value)
-                        }
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                       />
                     </div>
                     <div className="d-grid gap-2">

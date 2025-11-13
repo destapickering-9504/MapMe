@@ -113,13 +113,13 @@ run_infra_checks() {
     print_header "Checking Python Dependencies"
     if [ -f "requirements-dev.txt" ]; then
         # Try to install, but don't fail if there are conflicts (dependencies might already be installed)
-        if pip install -q -r requirements-dev.txt 2>/dev/null; then
+        if pip3 install -q -r requirements-dev.txt 2>/dev/null; then
             print_success "Python dependencies installed/verified"
         else
             print_warning "Dependency installation had issues, but continuing (may already be installed)"
             # Verify key packages are available
-            if ! python -c "import pytest" 2>/dev/null; then
-                print_error "pytest not found - please install dependencies: pip install -r requirements-dev.txt"
+            if ! python3 -c "import pytest" 2>/dev/null; then
+                print_error "pytest not found - please install dependencies: pip3 install -r requirements-dev.txt"
                 CHECKS_FAILED=1
                 cd ..
                 return
@@ -157,17 +157,17 @@ run_infra_checks() {
     
     # Black formatter check
     print_header "Black Format Check"
-    if black --check lambda_src/; then
+    if python3 -m black --check lambda_src/; then
         print_success "Black format check passed"
     else
         print_error "Black format check failed"
-        print_warning "Run 'black lambda_src/' in infra/ to fix formatting issues"
+        print_warning "Run 'python3 -m black lambda_src/' in infra/ to fix formatting issues"
         CHECKS_FAILED=1
     fi
     
     # Flake8 linter
     print_header "Flake8 Linter"
-    if flake8 lambda_src/; then
+    if python3 -m flake8 lambda_src/; then
         print_success "Flake8 check passed"
     else
         print_error "Flake8 check failed"
@@ -176,7 +176,7 @@ run_infra_checks() {
     
     # mypy type checker
     print_header "MyPy Type Check"
-    if mypy lambda_src/; then
+    if python3 -m mypy lambda_src/; then
         print_success "MyPy type check passed"
     else
         print_error "MyPy type check failed"
@@ -186,9 +186,9 @@ run_infra_checks() {
     # pytest
     print_header "Python Tests (pytest)"
     # Check if pytest-cov is available
-    if python -c "import pytest_cov" 2>/dev/null; then
+    if python3 -c "import pytest_cov" 2>/dev/null; then
         # Run with coverage if pytest-cov is installed
-        if pytest --cov --cov-report=term; then
+        if python3 -m pytest --cov --cov-report=term; then
             print_success "Python tests passed"
         else
             print_error "Python tests failed"
@@ -197,7 +197,7 @@ run_infra_checks() {
     else
         # Run without coverage if pytest-cov is not installed
         print_warning "pytest-cov not installed, running tests without coverage"
-        if pytest; then
+        if python3 -m pytest; then
             print_success "Python tests passed (without coverage)"
         else
             print_error "Python tests failed"

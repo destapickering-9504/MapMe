@@ -11,7 +11,7 @@ resource "aws_lambda_function" "user" {
   runtime       = "python3.11"
   filename      = data.archive_file.user_lambda_zip.output_path
   timeout       = 10
-  
+
   environment {
     variables = {
       USERS_TABLE = aws_dynamodb_table.users.name
@@ -35,7 +35,7 @@ resource "aws_lambda_function" "searches" {
   runtime       = "python3.11"
   filename      = data.archive_file.searches_lambda_zip.output_path
   timeout       = 10
-  
+
   environment {
     variables = {
       SEARCHES_TABLE = aws_dynamodb_table.searches.name

@@ -1,7 +1,7 @@
 resource "aws_api_gateway_rest_api" "rest_api" {
   name        = "${local.name_prefix}-api"
   description = "MapMe REST API - ${title(local.environment)} Environment"
-  
+
   tags = local.common_tags
 }
 
@@ -121,6 +121,6 @@ resource "aws_api_gateway_stage" "stage" {
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   deployment_id = aws_api_gateway_deployment.deploy.id
   stage_name    = local.environment
-  
+
   tags = local.common_tags
 }
