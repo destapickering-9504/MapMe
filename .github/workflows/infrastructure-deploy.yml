@@ -77,6 +77,15 @@ jobs:
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform validate
 
+      - name: Debug - List files in infra directory
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          echo "Files in infra directory:"
+          ls -la
+          echo ""
+          echo "Looking for tfvars files:"
+          ls -la *.tfvars || echo "No .tfvars files found"
+
       - name: Terraform Plan
         working-directory: ${{ env.INFRA_DIR }}
         run: |
