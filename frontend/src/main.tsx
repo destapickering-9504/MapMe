@@ -5,6 +5,7 @@ import { Amplify } from 'aws-amplify'
 import { cfg } from './aws-config'
 import PublicLayout from './components/PublicLayout'
 import AuthenticatedLayout from './components/AuthenticatedLayout'
+import Landing from './pages/Landing'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Onboarding from './pages/Onboarding'
@@ -18,6 +19,16 @@ Amplify.configure({
       userPoolId: cfg.userPoolId,
       userPoolClientId: cfg.userPoolClientId,
       identityPoolId: cfg.identityPoolId,
+      loginWith: {
+        email: true,
+      },
+      userPoolEndpoint: `https://cognito-idp.${cfg.region}.amazonaws.com`,
+    },
+  },
+  Storage: {
+    S3: {
+      bucket: cfg.avatarsBucket,
+      region: cfg.region,
     },
   },
 })
@@ -27,7 +38,7 @@ const router = createBrowserRouter([
     path: '/',
     element: <PublicLayout />,
     children: [
-      { index: true, element: <SignIn /> },
+      { index: true, element: <Landing /> },
       { path: 'signin', element: <SignIn /> },
       { path: 'signup', element: <SignUp /> },
     ],
