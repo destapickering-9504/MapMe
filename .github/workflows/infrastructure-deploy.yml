@@ -80,8 +80,8 @@ jobs:
       - name: Terraform Plan
         working-directory: ${{ env.INFRA_DIR }}
         run: |
-          echo "Planning for environment: ${{ env.ENVIRONMENT }}"
-          terraform plan -var-file="${{ env.ENVIRONMENT }}.tfvars" -out=tfplan -input=false
+          echo "Planning for environment: ${{ steps.set-env.outputs.environment }}"
+          terraform plan -var-file="${{ steps.set-env.outputs.environment }}.tfvars" -out=tfplan -input=false
           terraform show -no-color tfplan > plan.txt
 
       - name: Upload plan and Lambda ZIPs
