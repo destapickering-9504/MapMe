@@ -10,6 +10,10 @@ on:
       - '.github/workflows/frontend-deploy.yml'
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   NODE_VERSION: '18.x'
   FRONTEND_DIR: frontend
@@ -70,6 +74,9 @@ jobs:
     name: Deploy to S3 & CloudFront
     needs: test-and-build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
       - name: Download build artifacts
