@@ -110,6 +110,7 @@ jobs:
           name: terraform-plan
           path: |
             ${{ env.INFRA_DIR }}/tfplan
+            ${{ env.INFRA_DIR }}/placeholder.zip
             ${{ env.INFRA_DIR }}/lambda_src/*.zip
           retention-days: 7
 
@@ -244,13 +245,6 @@ jobs:
         with:
           name: terraform-plan
           path: ${{ env.INFRA_DIR }}
-
-      - name: Create placeholder.zip for Lambda deployment
-        working-directory: ${{ env.INFRA_DIR }}
-        run: |
-          echo 'def handler(event, context): return {"statusCode": 200}' > placeholder.py
-          zip placeholder.zip placeholder.py
-          rm placeholder.py
 
       - name: Terraform Init
         working-directory: ${{ env.INFRA_DIR }}
