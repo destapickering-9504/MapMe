@@ -9,10 +9,7 @@ terraform {
   }
 }
 
-# Optional: Uncomment to create the state backend resources
 # This creates the S3 bucket and DynamoDB table needed for remote state
-# Run this ONCE before migrating to remote backend
-
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "${local.name_prefix}-terraform-state-${random_string.suffix.result}"
 
