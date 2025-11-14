@@ -1,19 +1,13 @@
 # Terraform Backend Configuration for Remote State
-# CURRENTLY DISABLED - Using local state for initial deployment
-# Uncomment and configure the backend block below after creating state resources
-
-# terraform {
-#   backend "s3" {
-#     # These values should be provided via backend config file or CLI flags
-#     # Example: terraform init -backend-config="bucket=my-terraform-state-bucket"
-#     
-#     # bucket         = "REPLACE_WITH_YOUR_STATE_BUCKET"  # Set via -backend-config
-#     # key            = "mapme/terraform.tfstate"
-#     # region         = "us-west-1"                       # Set via -backend-config
-#     # dynamodb_table = "REPLACE_WITH_YOUR_LOCK_TABLE"   # Set via -backend-config
-#     # encrypt        = true
-#   }
-# }
+terraform {
+  backend "s3" {
+    bucket         = "mapme-dev-terraform-state-djohvo"
+    key            = "mapme/terraform.tfstate"
+    region         = "us-west-1"
+    dynamodb_table = "mapme-dev-terraform-locks-djohvo"
+    encrypt        = true
+  }
+}
 
 # Optional: Uncomment to create the state backend resources
 # This creates the S3 bucket and DynamoDB table needed for remote state
