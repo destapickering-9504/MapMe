@@ -1,92 +1,83 @@
 # Terraform Backend Configuration for Remote State
-# CURRENTLY DISABLED - Using local state for initial deployment
-# Uncomment and configure the backend block below after creating state resources
+terraform {
+  backend "s3" {
+    bucket         = "mapme-dev-terraform-state-djohvo"
+    key            = "mapme/terraform.tfstate"
+    region         = "us-west-1"
+    dynamodb_table = "mapme-dev-terraform-locks-djohvo"
+    encrypt        = true
+  }
+}
 
-# terraform {
-#   backend "s3" {
-#     # These values should be provided via backend config file or CLI flags
-#     # Example: terraform init -backend-config="bucket=my-terraform-state-bucket"
-#     
-#     # bucket         = "REPLACE_WITH_YOUR_STATE_BUCKET"  # Set via -backend-config
-#     # key            = "mapme/terraform.tfstate"
-#     # region         = "us-west-1"                       # Set via -backend-config
-#     # dynamodb_table = "REPLACE_WITH_YOUR_LOCK_TABLE"   # Set via -backend-config
-#     # encrypt        = true
+# # This creates the S3 bucket and DynamoDB table needed for remote state
+# resource "aws_s3_bucket" "terraform_state" {
+#   bucket = "${local.name_prefix}-terraform-state-${random_string.suffix.result}"
+
+#   tags = {
+#     Name        = "Terraform State Bucket"
+#     Environment = "Infrastructure"
+#     Project     = "MapMe"
+#   }
+
+#   lifecycle {
+#     prevent_destroy = true
 #   }
 # }
 
-# Optional: Uncomment to create the state backend resources
-# This creates the S3 bucket and DynamoDB table needed for remote state
-# Run this ONCE before migrating to remote backend
+# resource "aws_s3_bucket_versioning" "terraform_state" {
+#   bucket = aws_s3_bucket.terraform_state.id
 
-resource "aws_s3_bucket" "terraform_state" {
-  bucket = "${local.name_prefix}-terraform-state-${random_string.suffix.result}"
+#   versioning_configuration {
+#     status = "Enabled"
+#   }
+# }
 
-  tags = {
-    Name        = "Terraform State Bucket"
-    Environment = "Infrastructure"
-    Project     = "MapMe"
-  }
+# resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+#   bucket = aws_s3_bucket.terraform_state.id
 
-  lifecycle {
-    prevent_destroy = true
-  }
-}
+#   rule {
+#     apply_server_side_encryption_by_default {
+#       sse_algorithm = "AES256"
+#     }
+#   }
+# }
 
-resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+# resource "aws_s3_bucket_public_access_block" "terraform_state" {
+#   bucket = aws_s3_bucket.terraform_state.id
 
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
+#   block_public_acls       = true
+#   block_public_policy     = true
+#   ignore_public_acls      = true
+#   restrict_public_buckets = true
+# }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+# resource "aws_dynamodb_table" "terraform_locks" {
+#   name         = "${local.name_prefix}-terraform-locks-${random_string.suffix.result}"
+#   billing_mode = "PAY_PER_REQUEST"
+#   hash_key     = "LockID"
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
+#   attribute {
+#     name = "LockID"
+#     type = "S"
+#   }
 
-resource "aws_s3_bucket_public_access_block" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+#   tags = {
+#     Name        = "Terraform State Lock Table"
+#     Environment = "Infrastructure"
+#     Project     = "MapMe"
+#   }
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
+#   lifecycle {
+#     prevent_destroy = true
+#   }
+# }
 
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "${local.name_prefix}-terraform-locks-${random_string.suffix.result}"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
+# output "terraform_state_bucket" {
+#   description = "S3 bucket for Terraform state"
+#   value       = aws_s3_bucket.terraform_state.id
+# }
 
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  tags = {
-    Name        = "Terraform State Lock Table"
-    Environment = "Infrastructure"
-    Project     = "MapMe"
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-output "terraform_state_bucket" {
-  description = "S3 bucket for Terraform state"
-  value       = aws_s3_bucket.terraform_state.id
-}
-
-output "terraform_lock_table" {
-  description = "DynamoDB table for Terraform state locking"
-  value       = aws_dynamodb_table.terraform_locks.id
-}
+# output "terraform_lock_table" {
+#   description = "DynamoDB table for Terraform state locking"
+#   value       = aws_dynamodb_table.terraform_locks.id
+# }
