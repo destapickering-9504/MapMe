@@ -11,15 +11,13 @@ export default function Landing(): JSX.Element {
                 <div className="text-center mb-5">
                   <div className="d-flex align-items-center justify-content-center mb-4">
                     <h1 className="display-3 fw-bold text-primary mb-0 me-3">MapMe</h1>
-                    <img 
-                      src="/MapMeLogo.png" 
-                      alt="MapMe Logo" 
+                    <img
+                      src="/MapMeLogo.png"
+                      alt="MapMe Logo"
                       style={{ width: '80px', height: 'auto' }}
                     />
                   </div>
-                  <p className="lead text-secondary mb-2">
-                    Your Location-Based Discovery Platform
-                  </p>
+                  <p className="lead text-secondary mb-2">Your Location-Based Discovery Platform</p>
                   <p className="text-muted">
                     Find places, experiences, and services near you with personalized
                     recommendations
@@ -69,7 +67,7 @@ export default function Landing(): JSX.Element {
 
                 <div className="mt-5 text-center">
                   <small className="text-muted">
-                    Discover what's around you with smart, personalized recommendations
+                    Discover what&apos;s around you with smart, personalized recommendations
                   </small>
                 </div>
               </div>

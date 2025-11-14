@@ -54,9 +54,9 @@ export default function AvatarUpload({ onUploadComplete }: AvatarUploadProps): J
 
       // Construct the S3 URL
       const avatarUrl = `https://${cfg.avatarsBucket}.s3.${cfg.region}.amazonaws.com/${key}`
-      
+
       setMessage('Avatar uploaded successfully!')
-      
+
       // Notify parent component
       if (onUploadComplete) {
         onUploadComplete(avatarUrl)
@@ -105,7 +105,9 @@ export default function AvatarUpload({ onUploadComplete }: AvatarUploadProps): J
         )}
       </button>
       {message && (
-        <div className={`mt-2 small ${message.includes('success') ? 'text-success' : 'text-danger'}`}>
+        <div
+          className={`mt-2 small ${message.includes('success') ? 'text-success' : 'text-danger'}`}
+        >
           {message}
         </div>
       )}

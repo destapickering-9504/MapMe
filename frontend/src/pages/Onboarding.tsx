@@ -57,7 +57,7 @@ export default function Onboarding(): JSX.Element {
       const response = await fetch(`${apiUrl}/user`, {
         method: 'PUT',
         headers: {
-          'Authorization': token,
+          Authorization: token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -105,7 +105,8 @@ export default function Onboarding(): JSX.Element {
               <div className="card-body p-5">
                 <div className="text-center mb-4">
                   <div>
-                    <h2 className="h4 text-secondary mb-2">Welcome to MapMe!
+                    <h2 className="h4 text-secondary mb-2">
+                      Welcome to MapMe!
                       <img
                         src="/MapMeLogo.png"
                         alt="MapMe Logo"
@@ -114,7 +115,7 @@ export default function Onboarding(): JSX.Element {
                     </h2>
                   </div>
                   <p className="text-muted">
-                    Hi <strong>{email}</strong>! Let's personalize your experience.
+                    Hi <strong>{email}</strong>! Let&apos;s personalize your experience.
                   </p>
                 </div>
 

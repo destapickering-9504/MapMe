@@ -1,40 +1,44 @@
 /* MapMe Earthy Color Theme */
 :root {
   /* Primary Colors */
-  --sage-green: #8B9D83;
+  --sage-green: #8b9d83;
   --sage-green-dark: #6d7a67;
   --sage-green-light: #a4b49d;
-  
+
   /* Neutral Colors */
-  --cream: #F5F1E8;
-  --beige: #E8DCC4;
-  --white: #FFFFFF;
-  --warm-gray: #A8A39D;
-  --warm-gray-light: #C9C5C0;
-  
+  --cream: #f5f1e8;
+  --beige: #e8dcc4;
+  --white: #ffffff;
+  --warm-gray: #a8a39d;
+  --warm-gray-light: #c9c5c0;
+
   /* Accent Colors */
-  --terracotta: #C97D60;
+  --terracotta: #c97d60;
   --terracotta-dark: #b06a4f;
   --terracotta-light: #d99580;
-  
+
   /* Text Colors */
-  --brown: #7D6B5D;
+  --brown: #7d6b5d;
   --brown-dark: #5a4d42;
-  
+
   /* Border Colors */
   --border-light: #d4cfc8;
   --border-sage: #b5c2ae;
-  
+
   /* Background Colors */
-  --background-gradient-start: #F5F1E8;
-  --background-gradient-end: #E8DCC4;
+  --background-gradient-start: #f5f1e8;
+  --background-gradient-end: #e8dcc4;
 }
 
 /* Global Overrides */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: var(--brown);
-  background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--background-gradient-start) 0%,
+    var(--background-gradient-end) 100%
+  );
 }
 
 /* Button Overrides */
@@ -114,7 +118,11 @@ body {
 
 /* Background Utilities */
 .bg-light {
-  background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    var(--background-gradient-start) 0%,
+    var(--background-gradient-end) 100%
+  ) !important;
 }
 
 .bg-cream {

@@ -30,3 +30,10 @@ variable "cognito_domain_prefix" {
   type        = string
   default     = ""
 }
+
+variable "alarm_email" {
+  description = "Email address for CloudWatch alarm notifications (leave empty to skip email subscription)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

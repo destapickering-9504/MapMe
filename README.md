@@ -89,12 +89,12 @@ After deployment, note the Terraform outputs (Cognito IDs, API Base URL, S3 buck
 Create `frontend/.env.local` with values from Terraform outputs:
 
 ```
-VITE_REGION=us-west-1
-VITE_USER_POOL_ID=us-west-1_XXXXXX
-VITE_USER_POOL_CLIENT_ID=1a2b3c4d5e6f7g8h9i0j
-VITE_IDENTITY_POOL_ID=us-west-1:12345678-1234-1234-1234-123456789012
-VITE_API_BASE=https://abc123xyz.execute-api.us-west-1.amazonaws.com/dev
-VITE_AVATARS_BUCKET=mapme-avatars-abc123xyz
+VITE_REGION={VITE_REGION}
+VITE_USER_POOL_ID={VITE_USER_POOL_ID}
+VITE_USER_POOL_CLIENT_ID={VITE_USER_POOL_CLIENT_ID}
+VITE_IDENTITY_POOL_ID={VITE_IDENTITY_POOL_ID}
+VITE_API_BASE={VITE_API_BASE}
+VITE_AVATARS_BUCKET={VITE_AVATARS_BUCKET}
 ```
 
 ### 3. Local Development

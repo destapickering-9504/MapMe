@@ -30,3 +30,9 @@ output "cloudfront_domain_name" {
 #   value       = aws_amplify_app.app.default_domain
 #   description = "Amplify domain"
 # }
+
+# Monitoring Outputs
+output "alarms_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarms"
+  value       = aws_sns_topic.alarms.arn
+}
