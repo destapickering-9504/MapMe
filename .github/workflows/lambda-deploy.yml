@@ -1,0 +1,180 @@
+name: Lambda Functions Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - qa
+    paths:
+      - 'infra/lambda_src/**/*.py'
+      - 'infra/lambda_src/**/requirements.txt'
+      - 'infra/lambda-functions.tf'
+      - '.github/workflows/lambda-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.11'
+  INFRA_DIR: infra
+
+jobs:
+  test:
+    name: Test Lambda Functions
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          pip install -r requirements-dev.txt
+
+      - name: Run Black (formatter check)
+        working-directory: ${{ env.INFRA_DIR }}
+        run: black --check lambda_src/
+
+      - name: Run Flake8 (linter)
+        working-directory: ${{ env.INFRA_DIR }}
+        run: flake8 lambda_src/
+
+      - name: Run mypy (type checker)
+        working-directory: ${{ env.INFRA_DIR }}
+        run: mypy lambda_src/
+
+      - name: Run pytest
+        working-directory: ${{ env.INFRA_DIR }}
+        run: pytest --cov --cov-report=xml --cov-report=term
+
+  deploy:
+    name: Deploy Lambda Functions
+    needs: [test]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-LambdaDeploy
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Set environment based on branch
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/qa" ]]; then
+            echo "ENVIRONMENT=qa" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          fi
+          echo "Deploying Lambda functions to environment: $ENVIRONMENT"
+
+      - name: Get name prefix
+        id: get-prefix
+        run: |
+          # Extract name prefix from Terraform (mapme-dev, mapme-qa, etc.)
+          PREFIX="mapme-${ENVIRONMENT}"
+          echo "PREFIX=$PREFIX" >> $GITHUB_OUTPUT
+          echo "Using Lambda prefix: $PREFIX"
+
+      - name: Package user_handler Lambda
+        run: |
+          cd ${{ env.INFRA_DIR }}/lambda_src
+          mkdir -p /tmp/user_handler_package
+          cp user_handler/*.py /tmp/user_handler_package/
+          cp common/*.py /tmp/user_handler_package/
+          cd /tmp/user_handler_package
+          zip -r /tmp/user_handler.zip .
+          echo "✅ Packaged user_handler Lambda"
+
+      - name: Package searches_handler Lambda
+        run: |
+          cd ${{ env.INFRA_DIR }}/lambda_src
+          mkdir -p /tmp/searches_handler_package
+          cp searches_handler/*.py /tmp/searches_handler_package/
+          cp common/*.py /tmp/searches_handler_package/
+          cd /tmp/searches_handler_package
+          zip -r /tmp/searches_handler.zip .
+          echo "✅ Packaged searches_handler Lambda"
+
+      - name: Package post_confirmation_handler Lambda
+        run: |
+          cd ${{ env.INFRA_DIR }}/lambda_src
+          mkdir -p /tmp/post_confirmation_package
+          cp post_confirmation_handler/*.py /tmp/post_confirmation_package/
+          cp common/*.py /tmp/post_confirmation_package/
+          cd /tmp/post_confirmation_package
+          zip -r /tmp/post_confirmation.zip .
+          echo "✅ Packaged post_confirmation_handler Lambda"
+
+      - name: Deploy user Lambda
+        run: |
+          FUNCTION_NAME="${{ steps.get-prefix.outputs.PREFIX }}-user"
+          echo "Deploying to function: $FUNCTION_NAME"
+          aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --zip-file fileb:///tmp/user_handler.zip \
+            --region ${{ secrets.AWS_REGION }}
+          echo "✅ Deployed user Lambda"
+
+      - name: Deploy searches Lambda
+        run: |
+          FUNCTION_NAME="${{ steps.get-prefix.outputs.PREFIX }}-searches"
+          echo "Deploying to function: $FUNCTION_NAME"
+          aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --zip-file fileb:///tmp/searches_handler.zip \
+            --region ${{ secrets.AWS_REGION }}
+          echo "✅ Deployed searches Lambda"
+
+      - name: Deploy post-confirmation Lambda
+        run: |
+          FUNCTION_NAME="${{ steps.get-prefix.outputs.PREFIX }}-post-confirmation"
+          echo "Deploying to function: $FUNCTION_NAME"
+          aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --zip-file fileb:///tmp/post_confirmation.zip \
+            --region ${{ secrets.AWS_REGION }}
+          echo "✅ Deployed post-confirmation Lambda"
+
+      - name: Wait for functions to be ready
+        run: |
+          echo "Waiting for Lambda functions to be ready..."
+          sleep 5
+          
+          for FUNC in "user" "searches" "post-confirmation"; do
+            FUNCTION_NAME="${{ steps.get-prefix.outputs.PREFIX }}-${FUNC}"
+            aws lambda wait function-updated --function-name $FUNCTION_NAME --region ${{ secrets.AWS_REGION }}
+            echo "✅ $FUNCTION_NAME is ready"
+          done
+
+      - name: Summary
+        run: |
+          echo "## ⚡ Lambda Functions Deployed to ${{ env.ENVIRONMENT }}!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment: \`${{ env.ENVIRONMENT }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "### Functions Updated:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ ${{ steps.get-prefix.outputs.PREFIX }}-user" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ ${{ steps.get-prefix.outputs.PREFIX }}-searches" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ ${{ steps.get-prefix.outputs.PREFIX }}-post-confirmation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Deployment completed in ~30 seconds!**" >> $GITHUB_STEP_SUMMARY

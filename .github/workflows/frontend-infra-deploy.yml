@@ -1,0 +1,150 @@
+name: Frontend Infrastructure Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - qa
+    paths:
+      - 'infra/frontend-*.tf'
+      - 'infra/main.tf'
+      - 'infra/variables.tf'
+      - 'infra/locals.tf'
+      - 'infra/outputs.tf'
+      - '.github/workflows/frontend-infra-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TERRAFORM_VERSION: '1.8.0'
+  INFRA_DIR: infra
+
+jobs:
+  validate-and-plan:
+    name: Terraform Validate & Plan (Frontend)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-FrontendInfraDeploy
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/qa" ]]; then
+            echo "ENVIRONMENT=qa" >> $GITHUB_ENV
+            echo "environment=qa" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "environment=dev" >> $GITHUB_OUTPUT
+          fi
+          echo "Deploying frontend infrastructure to environment: $ENVIRONMENT"
+
+      - name: Terraform Init
+        working-directory: ${{ env.INFRA_DIR }}
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ${{ env.INFRA_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          echo "Planning frontend infrastructure for environment: ${{ steps.set-env.outputs.environment }}"
+          terraform plan -var-file="${{ steps.set-env.outputs.environment }}.tfvars" -out=tfplan -input=false
+          terraform show -no-color tfplan > plan.txt
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-frontend-plan
+          path: |
+            ${{ env.INFRA_DIR }}/tfplan
+          retention-days: 7
+
+  deploy:
+    name: Terraform Apply (Frontend)
+    needs: [validate-and-plan]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-FrontendInfraDeploy
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Set environment based on branch
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/qa" ]]; then
+            echo "ENVIRONMENT=qa" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          fi
+          echo "Deploying frontend infrastructure to environment: $ENVIRONMENT"
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-frontend-plan
+          path: ${{ env.INFRA_DIR }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.INFRA_DIR }}
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          echo "Applying frontend infrastructure for environment: ${{ env.ENVIRONMENT }}"
+          terraform apply -auto-approve tfplan
+
+      - name: Get outputs
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          echo "## 🎨 Frontend Infrastructure Deployed to ${{ env.ENVIRONMENT }}!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Environment: \`${{ env.ENVIRONMENT }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources Updated:" >> $GITHUB_STEP_SUMMARY
+          echo "- CloudFront Distribution" >> $GITHUB_STEP_SUMMARY
+          echo "- Cognito User Pool & Identity Pool" >> $GITHUB_STEP_SUMMARY
+          echo "- S3 Buckets (Frontend & Avatars)" >> $GITHUB_STEP_SUMMARY
