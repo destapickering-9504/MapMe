@@ -82,6 +82,11 @@ jobs:
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform init
 
+      - name: Terraform Refresh State
+        working-directory: ${{ env.INFRA_DIR }}
+        continue-on-error: true
+        run: terraform refresh -var-file="${{ env.ENVIRONMENT }}.tfvars"
+
       - name: Select or create Terraform workspace
         working-directory: ${{ env.INFRA_DIR }}
         run: |
