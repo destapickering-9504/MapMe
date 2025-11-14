@@ -63,6 +63,13 @@ jobs:
           fi
           echo "Deploying to environment: $ENVIRONMENT"
 
+      - name: Create placeholder.zip for Lambda validation
+        working-directory: ${{ env.INFRA_DIR }}
+        run: |
+          echo 'def handler(event, context): return {"statusCode": 200}' > placeholder.py
+          zip placeholder.zip placeholder.py
+          rm placeholder.py
+
       - name: Terraform Format Check
         working-directory: ${{ env.INFRA_DIR }}
         run: terraform fmt -check -recursive
