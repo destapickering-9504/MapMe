@@ -4,15 +4,15 @@
 # The placeholder.zip is used for initial creation only
 
 resource "aws_lambda_function" "user" {
-  function_name    = "${local.name_prefix}-user"
-  role             = aws_iam_role.lambda_role.arn
-  handler          = "index.handler"
-  runtime          = "python3.11"
-  
+  function_name = "${local.name_prefix}-user"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+
   # Placeholder for initial creation - actual code deployed via CI/CD
   filename         = "${path.module}/placeholder.zip"
   source_code_hash = filebase64sha256("${path.module}/placeholder.zip")
-  
+
   timeout = 10
 
   environment {
@@ -23,7 +23,7 @@ resource "aws_lambda_function" "user" {
   }
 
   tags = local.common_tags
-  
+
   # Ignore changes to code - managed by CI/CD
   lifecycle {
     ignore_changes = [
@@ -35,15 +35,15 @@ resource "aws_lambda_function" "user" {
 }
 
 resource "aws_lambda_function" "searches" {
-  function_name    = "${local.name_prefix}-searches"
-  role             = aws_iam_role.lambda_role.arn
-  handler          = "index.handler"
-  runtime          = "python3.11"
-  
+  function_name = "${local.name_prefix}-searches"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+
   # Placeholder for initial creation - actual code deployed via CI/CD
   filename         = "${path.module}/placeholder.zip"
   source_code_hash = filebase64sha256("${path.module}/placeholder.zip")
-  
+
   timeout = 10
 
   environment {
@@ -54,7 +54,7 @@ resource "aws_lambda_function" "searches" {
   }
 
   tags = local.common_tags
-  
+
   # Ignore changes to code - managed by CI/CD
   lifecycle {
     ignore_changes = [
@@ -66,15 +66,15 @@ resource "aws_lambda_function" "searches" {
 }
 
 resource "aws_lambda_function" "post_confirmation" {
-  function_name    = "${local.name_prefix}-post-confirmation"
-  role             = aws_iam_role.lambda_role.arn
-  handler          = "index.handler"
-  runtime          = "python3.11"
-  
+  function_name = "${local.name_prefix}-post-confirmation"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "python3.11"
+
   # Placeholder for initial creation - actual code deployed via CI/CD
   filename         = "${path.module}/placeholder.zip"
   source_code_hash = filebase64sha256("${path.module}/placeholder.zip")
-  
+
   timeout = 10
 
   environment {
@@ -85,7 +85,7 @@ resource "aws_lambda_function" "post_confirmation" {
   }
 
   tags = local.common_tags
-  
+
   # Ignore changes to code - managed by CI/CD
   lifecycle {
     ignore_changes = [
