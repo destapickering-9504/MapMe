@@ -94,6 +94,7 @@ jobs:
           name: terraform-backend-plan
           path: |
             ${{ env.INFRA_DIR }}/tfplan
+            ${{ env.INFRA_DIR }}/placeholder.zip
           retention-days: 7
 
   deploy:
