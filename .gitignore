@@ -54,8 +54,10 @@ Thumbs.db
 **/.terraform/*
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
 crash.log
 crash.*.log
+
 *.tfvars.json
 override.tf
 override.tf.json
@@ -63,6 +65,7 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+.terraform.lock.hcl
 
 # Python
 __pycache__/
@@ -77,8 +80,10 @@ ENV/
 pip-log.txt
 pip-delete-this-directory.txt
 .pytest_cache/
+.mypy_cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 *.cover
 *.log

@@ -87,3 +87,56 @@ resource "aws_lambda_function" "searches" {
 
   tags = local.common_tags
 }
+
+# Package post-confirmation handler with common utilities
+data "archive_file" "post_confirmation_lambda_zip" {
+  type        = "zip"
+  output_path = "${path.module}/lambda_src/post_confirmation_handler.zip"
+
+  source {
+    content  = file("${path.module}/lambda_src/post_confirmation_handler/index.py")
+    filename = "index.py"
+  }
+
+  source {
+    content  = file("${path.module}/lambda_src/post_confirmation_handler/__init__.py")
+    filename = "__init__.py"
+  }
+
+  source {
+    content  = file("${path.module}/lambda_src/common/utils.py")
+    filename = "common/utils.py"
+  }
+
+  source {
+    content  = file("${path.module}/lambda_src/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+}
+
+resource "aws_lambda_function" "post_confirmation" {
+  function_name    = "${local.name_prefix}-post-confirmation"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "python3.11"
+  filename         = data.archive_file.post_confirmation_lambda_zip.output_path
+  source_code_hash = data.archive_file.post_confirmation_lambda_zip.output_base64sha256
+  timeout          = 10
+
+  environment {
+    variables = {
+      USERS_TABLE_NAME = aws_dynamodb_table.users.name
+      ENVIRONMENT      = local.environment
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_lambda_permission" "cognito_post_confirmation" {
+  statement_id  = "AllowCognitoInvokePostConfirmation"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.post_confirmation.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.this.arn
+}

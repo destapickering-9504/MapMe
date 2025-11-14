@@ -1,0 +1,5 @@
+# Dependencies for post_confirmation_handler Lambda function
+# This Lambda is triggered by Cognito after user confirmation
+# and creates initial user records in DynamoDB
+
+boto3>=1.28.0

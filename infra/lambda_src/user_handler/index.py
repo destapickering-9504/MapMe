@@ -21,10 +21,12 @@ from common.utils import (  # noqa: E402
     validate_url,
 )
 
-# Initialize DynamoDB client
-dynamodb = boto3.resource("dynamodb")
-table_name = os.environ.get("USERS_TABLE_NAME", "")
-table = dynamodb.Table(table_name)
+
+def get_dynamodb_table() -> Any:
+    """Get DynamoDB table resource."""
+    dynamodb = boto3.resource("dynamodb")
+    table_name = os.environ.get("USERS_TABLE_NAME", "")
+    return dynamodb.Table(table_name)
 
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -126,6 +128,9 @@ def handle_get_user(user_id: str, email: str, request_id: str) -> Dict[str, Any]
             request_id=request_id,
             user_id=user_id,
         )
+
+        # Get DynamoDB table
+        table = get_dynamodb_table()
 
         # Try to get user from DynamoDB
         response = table.get_item(Key={"userId": user_id})
@@ -243,6 +248,9 @@ def handle_put_user(  # noqa: C901
             has_name="name" in body,
             has_avatar="avatarUrl" in body,
         )
+
+        # Get DynamoDB table
+        table = get_dynamodb_table()
 
         # Get current timestamp
         now = datetime.utcnow().isoformat() + "Z"

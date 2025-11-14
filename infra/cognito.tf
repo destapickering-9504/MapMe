@@ -29,6 +29,21 @@ resource "aws_cognito_user_pool" "this" {
     EOT
   }
 
+  lambda_config {
+    post_confirmation = aws_lambda_function.post_confirmation.arn
+  }
+
+  schema {
+    name                = "picture"
+    attribute_data_type = "String"
+    mutable             = true
+    required            = false
+  }
+
+  lifecycle {
+    ignore_changes = [schema]
+  }
+
   tags = local.common_tags
 }
 
