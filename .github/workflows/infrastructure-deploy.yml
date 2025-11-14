@@ -18,6 +18,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   TERRAFORM_VERSION: '1.13.5'
   PYTHON_VERSION: '3.11'

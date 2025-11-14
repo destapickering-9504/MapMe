@@ -18,6 +18,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   TERRAFORM_VERSION: '1.8.0'
   INFRA_DIR: infra
