@@ -33,10 +33,27 @@ resource "aws_api_gateway_method" "user_get" {
   authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
+resource "aws_api_gateway_method" "user_put" {
+  rest_api_id   = aws_api_gateway_rest_api.rest_api.id
+  resource_id   = aws_api_gateway_resource.user_res.id
+  http_method   = "PUT"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
 resource "aws_api_gateway_integration" "user_get" {
   rest_api_id             = aws_api_gateway_rest_api.rest_api.id
   resource_id             = aws_api_gateway_resource.user_res.id
   http_method             = aws_api_gateway_method.user_get.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.user.invoke_arn
+}
+
+resource "aws_api_gateway_integration" "user_put" {
+  rest_api_id             = aws_api_gateway_rest_api.rest_api.id
+  resource_id             = aws_api_gateway_resource.user_res.id
+  http_method             = aws_api_gateway_method.user_put.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.user.invoke_arn
@@ -97,6 +114,7 @@ resource "aws_api_gateway_deployment" "deploy" {
 
   depends_on = [
     aws_api_gateway_integration.user_get,
+    aws_api_gateway_integration.user_put,
     aws_api_gateway_integration.searches_get,
     aws_api_gateway_integration.searches_post,
   ]
@@ -106,9 +124,11 @@ resource "aws_api_gateway_deployment" "deploy" {
       aws_api_gateway_resource.user_res.id,
       aws_api_gateway_resource.searches_res.id,
       aws_api_gateway_method.user_get.id,
+      aws_api_gateway_method.user_put.id,
       aws_api_gateway_method.searches_get.id,
       aws_api_gateway_method.searches_post.id,
       aws_api_gateway_integration.user_get.id,
+      aws_api_gateway_integration.user_put.id,
       aws_api_gateway_integration.searches_get.id,
       aws_api_gateway_integration.searches_post.id,
     ]))

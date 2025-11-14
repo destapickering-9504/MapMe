@@ -12,11 +12,21 @@ resource "aws_cognito_user_pool" "this" {
     require_uppercase = true
   }
 
-  schema {
-    name                = "picture"
-    attribute_data_type = "String"
-    mutable             = true
-    required            = false
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "Welcome to MapMe! Confirm your email"
+    email_message        = <<-EOT
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+          <img src="https://${aws_cloudfront_distribution.frontend.domain_name}/MapMeLogo.png" alt="MapMe Logo" style="max-width: 200px; margin-bottom: 20px;" />
+          <h1 style="color: #333;">Welcome to MapMe!</h1>
+          <p style="font-size: 16px; color: #666;">We're excited to have you on board.</p>
+          <p style="font-size: 16px; color: #666;">To complete your registration and start exploring, please use the following verification code:</p>
+          <h2 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">{####}</h2>
+          <p style="font-size: 14px; color: #999; margin-top: 30px;">If you didn't request this, you can safely ignore this email.</p>
+        </body>
+      </html>
+    EOT
   }
 
   tags = local.common_tags

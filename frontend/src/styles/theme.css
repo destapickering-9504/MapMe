@@ -1,0 +1,236 @@
+/* MapMe Earthy Color Theme */
+:root {
+  /* Primary Colors */
+  --sage-green: #8b9d83;
+  --sage-green-dark: #6d7a67;
+  --sage-green-light: #a4b49d;
+
+  /* Neutral Colors */
+  --cream: #f5f1e8;
+  --beige: #e8dcc4;
+  --white: #ffffff;
+  --warm-gray: #a8a39d;
+  --warm-gray-light: #c9c5c0;
+
+  /* Accent Colors */
+  --terracotta: #c97d60;
+  --terracotta-dark: #b06a4f;
+  --terracotta-light: #d99580;
+
+  /* Text Colors */
+  --brown: #7d6b5d;
+  --brown-dark: #5a4d42;
+
+  /* Border Colors */
+  --border-light: #d4cfc8;
+  --border-sage: #b5c2ae;
+
+  /* Background Colors */
+  --background-gradient-start: #f5f1e8;
+  --background-gradient-end: #e8dcc4;
+}
+
+/* Global Overrides */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--brown);
+  background: linear-gradient(
+    135deg,
+    var(--background-gradient-start) 0%,
+    var(--background-gradient-end) 100%
+  );
+}
+
+/* Button Overrides */
+.btn-primary {
+  background-color: var(--sage-green);
+  border-color: var(--sage-green);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background-color: var(--sage-green-dark);
+  border-color: var(--sage-green-dark);
+}
+
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--sage-green-dark);
+  border-color: var(--sage-green-dark);
+  box-shadow: 0 0 0 0.25rem rgba(139, 157, 131, 0.25);
+}
+
+.btn-primary:disabled {
+  background-color: var(--sage-green-light);
+  border-color: var(--sage-green-light);
+  opacity: 0.65;
+}
+
+.btn-outline-secondary {
+  color: var(--brown);
+  border-color: var(--warm-gray);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--warm-gray);
+  border-color: var(--warm-gray);
+  color: var(--white);
+}
+
+.btn-secondary {
+  background-color: var(--terracotta);
+  border-color: var(--terracotta);
+  color: var(--white);
+}
+
+.btn-secondary:hover {
+  background-color: var(--terracotta-dark);
+  border-color: var(--terracotta-dark);
+}
+
+.btn-outline-primary {
+  color: var(--sage-green);
+  border-color: var(--sage-green);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--sage-green);
+  border-color: var(--sage-green);
+  color: var(--white);
+}
+
+/* Text Color Utilities */
+.text-primary {
+  color: var(--sage-green) !important;
+}
+
+.text-secondary {
+  color: var(--brown) !important;
+}
+
+.text-muted {
+  color: var(--warm-gray) !important;
+}
+
+.text-terracotta {
+  color: var(--terracotta);
+}
+
+/* Background Utilities */
+.bg-light {
+  background: linear-gradient(
+    135deg,
+    var(--background-gradient-start) 0%,
+    var(--background-gradient-end) 100%
+  ) !important;
+}
+
+.bg-cream {
+  background-color: var(--cream);
+}
+
+.bg-sage {
+  background-color: var(--sage-green);
+}
+
+/* Card Styling */
+.card {
+  background-color: var(--white);
+  border: 1px solid var(--border-light);
+}
+
+.card-body {
+  color: var(--brown);
+}
+
+/* Form Controls */
+.form-control {
+  border-color: var(--border-light);
+  color: var(--brown);
+}
+
+.form-control:focus {
+  border-color: var(--sage-green);
+  box-shadow: 0 0 0 0.25rem rgba(139, 157, 131, 0.15);
+}
+
+.form-control.is-invalid {
+  border-color: var(--terracotta);
+}
+
+.form-control.is-invalid:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 0.25rem rgba(201, 125, 96, 0.25);
+}
+
+.invalid-feedback {
+  color: var(--terracotta-dark);
+}
+
+.form-label {
+  color: var(--brown);
+  font-weight: 500;
+}
+
+/* Alert Styles */
+.alert-success {
+  background-color: rgba(139, 157, 131, 0.1);
+  border-color: var(--sage-green-light);
+  color: var(--sage-green-dark);
+}
+
+.alert-danger {
+  background-color: rgba(201, 125, 96, 0.1);
+  border-color: var(--terracotta-light);
+  color: var(--terracotta-dark);
+}
+
+.alert-info {
+  background-color: rgba(168, 163, 157, 0.1);
+  border-color: var(--warm-gray-light);
+  color: var(--brown);
+}
+
+/* Link Styles */
+a {
+  color: var(--sage-green);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--sage-green-dark);
+}
+
+/* Spinner */
+.spinner-border-primary {
+  color: var(--sage-green);
+}
+
+/* Custom Classes */
+.divider {
+  height: 1px;
+  background-color: var(--border-light);
+  margin: 1.5rem 0;
+}
+
+.countdown-text {
+  color: var(--warm-gray);
+  font-size: 0.875rem;
+}
+
+.resend-link {
+  color: var(--terracotta);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.resend-link:hover {
+  color: var(--terracotta-dark);
+}
+
+.resend-link:disabled,
+.resend-link.disabled {
+  color: var(--warm-gray-light);
+  cursor: not-allowed;
+  text-decoration: none;
+}

@@ -48,6 +48,10 @@ module = "tests.*"
 disallow_untyped_defs = false
 disallow_untyped_calls = false
 
+[[tool.mypy.overrides]]
+module = "lambda_src.*.index"
+warn_return_any = false
+
 [tool.pytest.ini_options]
 # Additional pytest configuration (supplements pytest.ini)
 minversion = "8.0"
