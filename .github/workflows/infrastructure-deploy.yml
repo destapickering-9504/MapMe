@@ -14,12 +14,6 @@ on:
       - '.github/workflows/infrastructure-deploy.yml'
   workflow_dispatch:
 
-# NOTE: This workflow now only handles shared infrastructure configuration
-# Specific deployments are handled by:
-# - frontend-infra-deploy.yml (CloudFront, Cognito, S3)
-# - backend-infra-deploy.yml (API Gateway, DynamoDB, IAM, CloudWatch)
-# - lambda-deploy.yml (Lambda function code - fast CI/CD)
-
 permissions:
   id-token: write
   contents: read
