@@ -7,7 +7,7 @@ on:
       - qa
     paths:
       - 'infra/main.tf'
-      - 'infra/backend.tf'
+      - 'infra/backend/backend.tf'
       - 'infra/variables.tf'
       - 'infra/locals.tf'
       - 'infra/outputs.tf'

@@ -6,7 +6,7 @@ on:
       - main
       - qa
     paths:
-      - 'infra/frontend-*.tf'
+      - 'infra/frontend/*.tf'
       - 'infra/main.tf'
       - 'infra/variables.tf'
       - 'infra/locals.tf'
