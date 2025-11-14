@@ -62,32 +62,43 @@ MapMe/
 - AWS credentials configured
 - Social provider credentials (Google, Facebook, Apple) for federated login
 
-### 1. Deploy Infrastructure
+### 1. Configure Infrastructure Variables
+
+Create your Terraform variables file from the template:
+
+```bash
+cd infra
+cp terraform.tfvars.example terraform.tfvars
+# OR for development environment
+cp dev.tfvars.example dev.tfvars
+```
+
+Edit the file and fill in your actual values. **Never commit these files to git** - they contain sensitive credentials.
+
+### 2. Deploy Infrastructure
 
 ```bash
 cd infra
 terraform init
-terraform apply \
-  -var="amplify_repo=https://github.com/<your-username>/mapme-frontend" \
-  -var="amplify_access_token=ghp_your_github_token" \
-  -var='app_callback_urls=["https://yourbranch.amplifyapp.com/onboarding"]' \
-  -var='app_logout_urls=["https://yourbranch.amplifyapp.com/signin"]' \
-  -var="google_client_id=your_google_client_id" \
-  -var="google_client_secret=your_google_client_secret" \
-  -var="facebook_app_id=your_facebook_app_id" \
-  -var="facebook_app_secret=your_facebook_app_secret" \
-  -var="apple_team_id=your_apple_team_id" \
-  -var="apple_services_id=your_apple_services_id" \
-  -var="apple_key_id=your_apple_key_id" \
-  -var="apple_private_key_p8=$(cat AuthKey_XXXXXX.p8)"
+terraform apply -var-file=dev.tfvars
+# OR
+terraform apply  # uses terraform.tfvars by default
 ```
 
 After deployment, note the Terraform outputs (Cognito IDs, API Base URL, S3 bucket name).
 
-### 2. Configure Frontend Environment
+### 3. Configure Frontend Environment
 
-Create `frontend/.env.local` with values from Terraform outputs:
+Create your frontend environment file from the template:
 
+```bash
+cd frontend
+cp .env.local.example .env.local
+```
+
+Edit `.env.local` and fill in the values from your Terraform outputs. **Never commit this file to git** - it contains deployment-specific configuration.
+
+Example:
 ```
 VITE_REGION={VITE_REGION}
 VITE_USER_POOL_ID={VITE_USER_POOL_ID}
@@ -97,7 +108,7 @@ VITE_API_BASE={VITE_API_BASE}
 VITE_AVATARS_BUCKET={VITE_AVATARS_BUCKET}
 ```
 
-### 3. Local Development
+### 4. Local Development
 
 ```bash
 cd frontend
@@ -107,7 +118,7 @@ npm run dev
 
 Visit `http://localhost:5173` to see the app.
 
-### 4. Build & Deploy
+### 5. Build & Deploy
 
 ```bash
 npm run build
@@ -192,16 +203,64 @@ npm run build
 
 ## Development Workflow
 
+### Running Checks Locally
+
+Before pushing your changes, you can run the same checks that run in CI/CD:
+
+```bash
+# Run all checks (frontend + infrastructure)
+./run-checks.sh
+
+# Run only frontend checks
+./run-checks.sh --frontend-only
+
+# Run only infrastructure checks
+./run-checks.sh --infra-only
+
+# Show help
+./run-checks.sh --help
+```
+
+The script validates:
+- **Frontend**: TypeScript types, ESLint, Prettier formatting, tests, build
+- **Infrastructure**: Terraform formatting/validation, Python Black formatting, Flake8 linting, MyPy types, pytest
+
+### Local Development
+
 ```bash
 # Start local frontend dev server
-npm run dev
+cd frontend && npm run dev
 
 # For backend changes, redeploy Lambda:
-terraform apply -var-file=prod.tfvars
+cd infra && terraform apply -var-file=dev.tfvars
 
 # Test API endpoints with curl:
 curl -H "Authorization: Bearer $ID_TOKEN" \
   https://api.example.com/dev/user
+```
+
+### Monorepo Commands
+
+From the root directory, you can run:
+
+```bash
+# Install frontend dependencies
+npm run install:frontend
+
+# Start frontend dev server
+npm run dev
+
+# Run frontend tests
+npm run test:frontend
+
+# Run infrastructure tests
+npm run test:infra
+
+# Run all tests
+npm run test:all
+
+# Run all checks (alias for run-checks.sh)
+npm run checks:all
 ```
 
 ## Troubleshooting

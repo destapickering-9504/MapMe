@@ -25,6 +25,13 @@ resource "aws_api_gateway_authorizer" "cognito" {
   identity_source = "method.request.header.Authorization"
 }
 
+resource "aws_api_gateway_method" "user_options" {
+  rest_api_id   = aws_api_gateway_rest_api.rest_api.id
+  resource_id   = aws_api_gateway_resource.user_res.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
 resource "aws_api_gateway_method" "user_get" {
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   resource_id   = aws_api_gateway_resource.user_res.id
@@ -39,6 +46,40 @@ resource "aws_api_gateway_method" "user_put" {
   http_method   = "PUT"
   authorization = "COGNITO_USER_POOLS"
   authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
+resource "aws_api_gateway_integration" "user_options" {
+  rest_api_id = aws_api_gateway_rest_api.rest_api.id
+  resource_id = aws_api_gateway_resource.user_res.id
+  http_method = aws_api_gateway_method.user_options.http_method
+  type        = "MOCK"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "user_options" {
+  rest_api_id = aws_api_gateway_rest_api.rest_api.id
+  resource_id = aws_api_gateway_resource.user_res.id
+  http_method = aws_api_gateway_method.user_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "user_options" {
+  rest_api_id = aws_api_gateway_rest_api.rest_api.id
+  resource_id = aws_api_gateway_resource.user_res.id
+  http_method = aws_api_gateway_method.user_options.http_method
+  status_code = aws_api_gateway_method_response.user_options.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,PUT,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
 }
 
 resource "aws_api_gateway_integration" "user_get" {
@@ -67,6 +108,13 @@ resource "aws_lambda_permission" "apigw_user" {
   source_arn    = "${aws_api_gateway_rest_api.rest_api.execution_arn}/*/*"
 }
 
+resource "aws_api_gateway_method" "searches_options" {
+  rest_api_id   = aws_api_gateway_rest_api.rest_api.id
+  resource_id   = aws_api_gateway_resource.searches_res.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
 resource "aws_api_gateway_method" "searches_get" {
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id
   resource_id   = aws_api_gateway_resource.searches_res.id
@@ -81,6 +129,40 @@ resource "aws_api_gateway_method" "searches_post" {
   http_method   = "POST"
   authorization = "COGNITO_USER_POOLS"
   authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
+resource "aws_api_gateway_integration" "searches_options" {
+  rest_api_id = aws_api_gateway_rest_api.rest_api.id
+  resource_id = aws_api_gateway_resource.searches_res.id
+  http_method = aws_api_gateway_method.searches_options.http_method
+  type        = "MOCK"
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "searches_options" {
+  rest_api_id = aws_api_gateway_rest_api.rest_api.id
+  resource_id = aws_api_gateway_resource.searches_res.id
+  http_method = aws_api_gateway_method.searches_options.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "searches_options" {
+  rest_api_id = aws_api_gateway_rest_api.rest_api.id
+  resource_id = aws_api_gateway_resource.searches_res.id
+  http_method = aws_api_gateway_method.searches_options.http_method
+  status_code = aws_api_gateway_method_response.searches_options.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
 }
 
 resource "aws_api_gateway_integration" "searches_get" {
@@ -113,8 +195,10 @@ resource "aws_api_gateway_deployment" "deploy" {
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
 
   depends_on = [
+    aws_api_gateway_integration.user_options,
     aws_api_gateway_integration.user_get,
     aws_api_gateway_integration.user_put,
+    aws_api_gateway_integration.searches_options,
     aws_api_gateway_integration.searches_get,
     aws_api_gateway_integration.searches_post,
   ]
@@ -123,12 +207,16 @@ resource "aws_api_gateway_deployment" "deploy" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.user_res.id,
       aws_api_gateway_resource.searches_res.id,
+      aws_api_gateway_method.user_options.id,
       aws_api_gateway_method.user_get.id,
       aws_api_gateway_method.user_put.id,
+      aws_api_gateway_method.searches_options.id,
       aws_api_gateway_method.searches_get.id,
       aws_api_gateway_method.searches_post.id,
+      aws_api_gateway_integration.user_options.id,
       aws_api_gateway_integration.user_get.id,
       aws_api_gateway_integration.user_put.id,
+      aws_api_gateway_integration.searches_options.id,
       aws_api_gateway_integration.searches_get.id,
       aws_api_gateway_integration.searches_post.id,
     ]))
