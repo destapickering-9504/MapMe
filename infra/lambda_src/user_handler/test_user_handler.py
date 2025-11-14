@@ -2,6 +2,7 @@
 
 import json
 import os
+import os
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
@@ -108,10 +109,24 @@ class TestHandlerRouting:
         api_gateway_event: Dict[str, Any],
         lambda_context: MagicMock,
         mock_env_vars: None,
+        mock_env_vars: None,
     ) -> None:
         """Test handler returns 405 for unsupported methods."""
         api_gateway_event["httpMethod"] = "DELETE"
+        """Test handler returns 405 for unsupported methods."""
+        api_gateway_event["httpMethod"] = "DELETE"
         result = handler(api_gateway_event, lambda_context)
+        assert result["statusCode"] == 405
+
+    def test_handler_missing_user_id(
+        self,
+        lambda_context: MagicMock,
+        mock_env_vars: None,
+    ) -> None:
+        """Test handler returns 401 when user ID is missing."""
+        event = {"httpMethod": "GET", "requestContext": {"authorizer": {"claims": {}}}}
+        result = handler(event, lambda_context)
+        assert result["statusCode"] == 401
         assert result["statusCode"] == 405
 
     def test_handler_missing_user_id(
@@ -234,7 +249,9 @@ class TestPutUser:
     def test_handle_put_user_update_existing(
         self,
         api_gateway_event: Dict[str, Any],
+        api_gateway_event: Dict[str, Any],
         lambda_context: MagicMock,
+        mock_env_vars: None,
         mock_env_vars: None,
     ) -> None:
         """Test updating an existing user."""
@@ -288,6 +305,7 @@ class TestPutUser:
         api_gateway_event: Dict[str, Any],
         lambda_context: MagicMock,
         mock_env_vars: None,
+        mock_env_vars: None,
     ) -> None:
         """Test handling validation failures."""
         os.environ["USERS_TABLE_NAME"] = "test-users-table"
@@ -298,7 +316,30 @@ class TestPutUser:
         result = handle_put_user("test-123", "test@example.com", event, "req-123")
 
         assert result["statusCode"] == 400
+        """Test handling validation failures."""
+        os.environ["USERS_TABLE_NAME"] = "test-users-table"
+
+        event = api_gateway_event.copy()
+        event["body"] = json.dumps({"name": "a" * 101})
+
+        result = handle_put_user("test-123", "test@example.com", event, "req-123")
+
+        assert result["statusCode"] == 400
         body = json.loads(result["body"])
+        assert "Validation failed" in body["error"]
+        assert "details" in body
+
+    def test_handle_put_user_dynamodb_error(
+        self,
+        api_gateway_event: Dict[str, Any],
+        lambda_context: MagicMock,
+        mock_env_vars: None,
+    ) -> None:
+        """Test handling DynamoDB errors during PUT."""
+        os.environ["USERS_TABLE_NAME"] = "test-users-table"
+
+        event = api_gateway_event.copy()
+        event["body"] = json.dumps({"name": "Test User"})
         assert "Validation failed" in body["error"]
         assert "details" in body
 
@@ -337,6 +378,7 @@ class TestResponseFormat:
         api_gateway_event: Dict[str, Any],
         lambda_context: MagicMock,
         mock_env_vars: None,
+        mock_env_vars: None,
     ) -> None:
         """Test that CORS headers are included in response."""
         os.environ["USERS_TABLE_NAME"] = "test-users-table"
@@ -347,6 +389,8 @@ class TestResponseFormat:
             mock_get_table.return_value = mock_table
             result = handler(api_gateway_event, lambda_context)
 
+            assert "Access-Control-Allow-Origin" in result["headers"]
+            assert result["headers"]["Access-Control-Allow-Origin"] == "*"
             assert "Access-Control-Allow-Origin" in result["headers"]
             assert result["headers"]["Access-Control-Allow-Origin"] == "*"
 
