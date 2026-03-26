@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { OptimizeRequest } from "../domain/routeTypes";
+import { buildStopSearchQuery } from "../domain/stopQueryBuild";
 import AddressAutocomplete from "./AddressAutocomplete";
 
 interface Props {
@@ -36,14 +37,14 @@ function rowToQuery(row: StopRow): { ok: true; query: string } | { ok: false; re
     if (!addr) {
       return { ok: false, reason: "address" };
     }
-    return { ok: true, query: `${name}, ${addr}` };
+    return { ok: true, query: buildStopSearchQuery(name, addr) };
   }
   return { ok: true, query: name };
 }
 
 export default function StoreInputForm({ onSubmit }: Props) {
   const [originPlace, setOriginPlace] = useState("");
-  const [stops, setStops] = useState<StopRow[]>(() => [newStopRow({ name: "Target" }), newStopRow({ name: "Whole Foods" })]);
+  const [stops, setStops] = useState<StopRow[]>(() => [newStopRow(), newStopRow()]);
   const [error, setError] = useState<string | null>(null);
 
   const patchStop = (id: string, patch: Partial<StopRow>) => {
@@ -168,7 +169,8 @@ export default function StoreInputForm({ onSubmit }: Props) {
                 Address for this stop
               </label>
               <p className="muted-small address-autocomplete-help">
-                Optional detail so we pick the right location (street, city, or ZIP).
+                We pin this stop to this address (geocoded as you typed it)—we won&apos;t swap it for another
+                search hit.
               </p>
               <AddressAutocomplete
                 inputId={`stop-address-${row.id}`}

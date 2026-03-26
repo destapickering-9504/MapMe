@@ -89,3 +89,37 @@ def best_route_with_fixed_destination(
         scored.append((ol, minutes))
     scored.sort(key=lambda item: item[1])
     return scored[:top_n]
+
+
+def best_permutation_round_trip(
+    matrix: list[list[float]], num_stores: int, round_trip: bool
+) -> tuple[list[int], float]:
+    """Single fastest visit order for a fixed store-location assignment."""
+    idx = list(range(num_stores))
+    best_order: list[int] | None = None
+    best_minutes = float("inf")
+    for order in permutations(idx):
+        ol = list(order)
+        minutes = score_route_order(matrix, ol, round_trip)
+        if minutes < best_minutes:
+            best_minutes = minutes
+            best_order = ol
+    assert best_order is not None
+    return best_order, best_minutes
+
+
+def best_permutation_fixed_destination(
+    matrix: list[list[float]], num_stores: int
+) -> tuple[list[int], float]:
+    """Single fastest visit order for a fixed assignment ending at a fixed destination row."""
+    idx = list(range(num_stores))
+    best_order: list[int] | None = None
+    best_minutes = float("inf")
+    for order in permutations(idx):
+        ol = list(order)
+        minutes = score_route_to_fixed_destination(matrix, ol, num_stores)
+        if minutes < best_minutes:
+            best_minutes = minutes
+            best_order = ol
+    assert best_order is not None
+    return best_order, best_minutes

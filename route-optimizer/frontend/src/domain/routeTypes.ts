@@ -1,25 +1,3 @@
-export interface NearbyRequest {
-  origin_place: string;
-  search: string;
-}
-
-export interface NearbyPlace {
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  distance_m: number;
-}
-
-export interface NearbyResponse {
-  origin_query: string;
-  origin_address: string;
-  origin_lat: number;
-  origin_lng: number;
-  search: string;
-  places: NearbyPlace[];
-}
-
 export interface OptimizeRequest {
   origin_place: string;
   stores: string[];
@@ -57,6 +35,8 @@ export interface OptimizeResponse {
   best_route: RouteOption;
   alternatives: RouteOption[];
   explanation: string;
+  /** Free-flow vs traffic; optional server congestion bbox. */
+  travel_time_note: string;
   best_route_geojson: GeoJsonLineString | null;
   /** Polyline for each ranked option: [best, ...alternatives]. */
   route_geojson_options?: (GeoJsonLineString | null)[] | null;

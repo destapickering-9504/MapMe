@@ -50,15 +50,23 @@ export default function RouteResultsPanel({ result, selectedRouteIndex, onSelect
       </ul>
 
       <p className="permutations-note">
-        All <strong>{result.permutations_considered}</strong> possible ways to order your stops were compared for
-        total driving time
+        We compared <strong>{result.permutations_considered}</strong> combinations of{" "}
+        <strong>store locations</strong> (alternate map matches per stop) and visit orders for total driving time
         {result.destination_lat != null ? " from start through all stops to your end location" : ""}.
+        {result.alternatives.length > 0 ? (
+          <>
+            {" "}
+            Extra routes use different matched stores when search returns them—not only the same pins in a different
+            order.
+          </>
+        ) : null}
       </p>
 
       <h3 className="section-spaced">Pick a route</h3>
       <p className="muted-small">
-        The suggested option is the fastest driving time. Pick another row to preview that path on the map —
-        the badge on the map shows which route you&apos;re viewing.
+        The suggested option is the fastest driving time. Other rows may use a different matched store (e.g. another
+        Target) when available. Pick a row to preview that path on the map — the badge shows which route you&apos;re
+        viewing.
       </p>
       <ul className="route-picker-list" role="radiogroup" aria-label="Route options">
         {allOptions.map((option, idx) => (
@@ -114,6 +122,9 @@ export default function RouteResultsPanel({ result, selectedRouteIndex, onSelect
       )}
 
       <p className="explanation-text">{result.explanation}</p>
+
+      <h3 className="section-spaced">About drive times</h3>
+      <p className="muted-small travel-time-note">{result.travel_time_note}</p>
     </section>
   );
 }

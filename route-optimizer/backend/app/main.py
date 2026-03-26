@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.geocode_suggest import router as geocode_suggest_router
-from app.api.nearby import router as nearby_router
 from app.api.optimize import router as optimize_router
 
 app = FastAPI(title="Route Optimizer API")
@@ -19,7 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(optimize_router)
-app.include_router(nearby_router)
 app.include_router(geocode_suggest_router)
 
 

@@ -27,6 +27,7 @@ describe("App", () => {
       },
       alternatives: [],
       explanation: "best route",
+      travel_time_note: "Drive times use free-flow speeds, not live traffic.",
       best_route_geojson: {
         type: "LineString",
         coordinates: [
@@ -51,59 +52,32 @@ describe("App", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockImplementation((input: RequestInfo) => {
-        const url = typeof input === "string" ? input : input.url;
-        if (url.includes("/api/nearby")) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              origin_query: "94102",
-              origin_address: "San Francisco, CA",
-              origin_lat: 37.77,
-              origin_lng: -122.42,
-              search: "Target",
-              places: [
-                { name: "Target A", address: "1 St", lat: 37.78, lng: -122.41, distance_m: 400 },
-                { name: "Target B", address: "2 St", lat: 37.76, lng: -122.43, distance_m: 900 }
-              ]
-            })
-          });
-        }
-        return Promise.resolve({
+      vi.fn().mockImplementation(() =>
+        Promise.resolve({
           ok: true,
           json: async () => optimizePayload
-        });
-      })
+        })
+      )
     );
   });
 
   test("renders heading", () => {
     render(<App />);
-    expect(screen.getByText("Route Optimizer")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /Route Optimizer/i })).toBeTruthy();
   });
 
   test("runs optimization and renders result", async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("tab", { name: /Plan your Route/i }));
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "94102" }
     });
-    fireEvent.click(screen.getAllByText("Optimize Route")[0]);
-    await waitFor(() => expect(screen.getByText("Pick a route")).toBeTruthy());
-  });
-
-  test("find nearby shows legend with place names", async () => {
-    render(<App />);
-    fireEvent.change(screen.getByLabelText("nearby-origin-input"), {
-      target: { value: "94102" }
-    });
-    fireEvent.change(screen.getByLabelText("nearby-search-input"), {
+    fireEvent.change(screen.getByLabelText("Stop 1 store or place name"), {
       target: { value: "Target" }
     });
-    fireEvent.click(screen.getByRole("button", { name: /Find nearby stores/i }));
-    const legend = await screen.findByRole("list", { name: /nearby results/i });
-    expect(legend).toBeTruthy();
-    expect(legend.textContent).toContain("Target A");
-    expect(legend.textContent).toContain("Target B");
+    fireEvent.change(screen.getByLabelText("Stop 2 store or place name"), {
+      target: { value: "Whole Foods" }
+    });
+    fireEvent.click(screen.getAllByText("Optimize Route")[0]);
+    await waitFor(() => expect(screen.getByText("Pick a route")).toBeTruthy());
   });
 });

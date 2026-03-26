@@ -37,13 +37,15 @@ describe("RouteResultsPanel", () => {
             }
           ],
           explanation: "Evaluated all orders.",
+          travel_time_note: "No live traffic in estimates.",
           best_route_geojson: null
         }}
       />
     );
     expect(screen.getByText("30030")).toBeTruthy();
     expect(screen.getByText("Decatur, GA, USA")).toBeTruthy();
-    expect(screen.getByText(/were compared/i)).toBeTruthy();
+    expect(screen.getByText(/store locations/i)).toBeTruthy();
+    expect(screen.getByText("About drive times")).toBeTruthy();
     expect(screen.getByText("Pick a route")).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Route 1 suggested fastest/i })).toBeTruthy();
     expect(screen.getAllByText("Target, 100 Main St").length).toBe(2);
@@ -70,6 +72,7 @@ describe("RouteResultsPanel", () => {
           },
           alternatives: [],
           explanation: "ok",
+          travel_time_note: "No live traffic.",
           best_route_geojson: null,
           destination_query: "Bellevue, WA",
           destination_address: "Bellevue, WA, USA",

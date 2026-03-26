@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from itertools import product
-from typing import Sequence
+from typing import Sequence, Union
 
 from app.domain.geo import haversine_m
 from app.domain.places import ResolvedLocation
@@ -67,20 +67,21 @@ def _pairwise_colocated_count(
 
 def _assignment_sort_key(
     picks: Sequence[ResolvedLocation],
-    anchor: tuple[float, float],
+    anchors: Sequence[tuple[float, float]],
     lot_radius_m: float,
 ) -> tuple[int, float]:
-    """Lower is better: maximize colocated pairs, then minimize total distance from anchor."""
+    """Lower is better: maximize colocated pairs, then minimize per-stop anchor distances."""
     pairs = _pairwise_colocated_count(picks, lot_radius_m)
     anchor_sum = sum(
-        haversine_m(anchor[0], anchor[1], p.lat, p.lng) for p in picks
+        haversine_m(anchors[i][0], anchors[i][1], picks[i].lat, picks[i].lng)
+        for i in range(len(picks))
     )
     return (-pairs, anchor_sum)
 
 
 def _joint_cluster_seed(
     candidate_lists: list[list[ResolvedLocation]],
-    anchor: tuple[float, float],
+    anchors: list[tuple[float, float]],
     lot_radius_m: float,
     max_product: int = _JOINT_ASSIGNMENT_MAX_PRODUCT,
 ) -> list[ResolvedLocation] | None:
@@ -101,7 +102,7 @@ def _joint_cluster_seed(
     best_picks: list[ResolvedLocation] | None = None
     for combo in product(*candidate_lists):
         picks = list(combo)
-        key = _assignment_sort_key(picks, anchor, lot_radius_m)
+        key = _assignment_sort_key(picks, anchors, lot_radius_m)
         if best_key is None or key < best_key:
             best_key = key
             best_picks = picks
@@ -120,11 +121,14 @@ def _locations_within_m(
 
 def refine_store_locations_mutual(
     candidate_lists: list[list[ResolvedLocation]],
-    anchor: tuple[float, float],
+    anchor: Union[tuple[float, float], list[tuple[float, float]]],
     lot_radius_m: float,
     max_rounds: int = 8,
 ) -> list[ResolvedLocation]:
     """Pick one resolved location per stop, favoring sets that cluster near each other.
+
+    ``anchor`` is either one tuple applied to every stop or a per-stop list (same length as
+    ``candidate_lists``) blending trip anchor with an optional stop-specific address anchor.
 
     Starts from a joint optimum over candidate combinations when enumeration is cheap; otherwise
     falls back to a sequential seed. Then iterates until picks stabilize under mutual updates.
@@ -133,7 +137,14 @@ def refine_store_locations_mutual(
     if n == 0:
         return []
 
-    joint = _joint_cluster_seed(candidate_lists, anchor, lot_radius_m)
+    if isinstance(anchor, tuple):
+        anchors = [anchor] * n
+    else:
+        if len(anchor) != n:
+            raise ValueError("anchor list length must match number of stops")
+        anchors = list(anchor)
+
+    joint = _joint_cluster_seed(candidate_lists, anchors, lot_radius_m)
     if joint is not None:
         locations = joint
     else:
@@ -142,7 +153,7 @@ def refine_store_locations_mutual(
             prior_coords = [(loc.lat, loc.lng) for loc in locations]
             locations.append(
                 choose_store_candidate(
-                    candidate_lists[i], anchor, prior_coords, lot_radius_m
+                    candidate_lists[i], anchors[i], prior_coords, lot_radius_m
                 )
             )
     for _ in range(max(1, max_rounds) - 1):
@@ -153,7 +164,7 @@ def refine_store_locations_mutual(
             ]
             next_locs.append(
                 choose_store_candidate(
-                    candidate_lists[i], anchor, prior_coords, lot_radius_m
+                    candidate_lists[i], anchors[i], prior_coords, lot_radius_m
                 )
             )
         if _locations_within_m(locations, next_locs, epsilon_m=3.0):

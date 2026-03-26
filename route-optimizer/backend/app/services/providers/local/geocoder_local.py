@@ -9,11 +9,10 @@ class LocalGeocoderProvider(GeocoderProvider):
         raise NotImplementedError("Local geocoder provider not implemented yet.")
 
     async def candidates_for_store(
-        self, store_query: str, origin: tuple[float, float]
-    ) -> list[ResolvedLocation]:
-        raise NotImplementedError("Local geocoder provider not implemented yet.")
-
-    async def search_places_near(
-        self, search_term: str, origin: tuple[float, float]
+        self,
+        store_query: str,
+        origin: tuple[float, float],
+        *,
+        stop_anchor: tuple[float, float] | None = None,
     ) -> list[ResolvedLocation]:
         raise NotImplementedError("Local geocoder provider not implemented yet.")

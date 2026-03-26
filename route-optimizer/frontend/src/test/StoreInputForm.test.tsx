@@ -48,6 +48,31 @@ describe("StoreInputForm", () => {
     expect(payload.stores).toEqual(["Petco, 2001 15th Ave W", "Whole Foods"]);
   });
 
+  test("dedupes POI name when address autocomplete repeats the place name", () => {
+    const onSubmit = vi.fn();
+    render(<StoreInputForm onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByLabelText("origin-place-input"), {
+      target: { value: "Seattle, WA" }
+    });
+    fireEvent.change(screen.getByLabelText("Stop 1 store or place name"), {
+      target: { value: "Cheesecake Factory" }
+    });
+    fireEvent.click(screen.getByLabelText("Stop 1 use specific address"));
+    fireEvent.change(screen.getByLabelText("Stop 1 specific address"), {
+      target: {
+        value: "The Cheesecake Factory, Alderwood Mall Parkway, Lynnwood, WA, USA"
+      }
+    });
+    fireEvent.change(screen.getByLabelText("Stop 2 store or place name"), {
+      target: { value: "Whole Foods" }
+    });
+    fireEvent.click(screen.getByText("Optimize Route"));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].stores[0]).toBe(
+      "Cheesecake Factory, Alderwood Mall Parkway, Lynnwood, WA, USA"
+    );
+  });
+
   test("blocks submit when fewer than two named stops", () => {
     const onSubmit = vi.fn();
     render(<StoreInputForm onSubmit={onSubmit} />);

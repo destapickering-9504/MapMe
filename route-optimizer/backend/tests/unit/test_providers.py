@@ -1,47 +1,12 @@
 import pytest
 
 import app.services.providers.public.geocoder_public as geocoder_module
+from app.domain.geo import haversine_m
 import app.services.providers.public.router_public as router_module
 from app.services.providers.local.geocoder_local import LocalGeocoderProvider
 from app.services.providers.local.router_local import LocalRoutingProvider
 from app.services.providers.public.geocoder_public import PublicGeocoderProvider
 from app.services.providers.public.router_public import PublicRoutingProvider
-
-
-@pytest.mark.asyncio
-async def test_public_geocoder_search_places_near_uses_bounded_viewbox(monkeypatch):
-    captured: dict = {}
-
-    class DummyResponse:
-        def raise_for_status(self) -> None:
-            return None
-
-        def json(self) -> list[dict[str, str]]:
-            return [
-                {"lat": "37.0", "lon": "-122.0", "display_name": "One, CA"},
-                {"lat": "37.02", "lon": "-122.02", "display_name": "Two, CA"},
-            ]
-
-    class DummyClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-        async def get(self, *args, **kwargs):
-            captured["params"] = kwargs.get("params")
-            return DummyResponse()
-
-    monkeypatch.setattr(geocoder_module.httpx, "AsyncClient", DummyClient)
-    provider = PublicGeocoderProvider()
-    items = await provider.search_places_near("grocery", (37.0, -122.0))
-    assert len(items) == 2
-    assert captured["params"]["bounded"] == "1"
-    assert captured["params"]["viewbox"]
 
 
 @pytest.mark.asyncio
@@ -117,6 +82,51 @@ async def test_public_geocoder_candidates_ordered_by_distance_to_origin(monkeypa
     assert len(items) == 2
     assert items[0].display_address == "Close to origin"
     assert items[1].display_address == "Far from origin"
+
+
+@pytest.mark.asyncio
+async def test_public_geocoder_candidates_ordered_by_dual_anchors(monkeypatch):
+    """With stop_anchor, rank by sum of haversine distances to trip and stop anchors."""
+
+    class DummyResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> list[dict[str, str]]:
+            return [
+                {"lat": "37.0", "lon": "-122.0", "display_name": "On trip anchor only"},
+                {"lat": "37.05", "lon": "-122.05", "display_name": "Between both anchors"},
+                {"lat": "40.0", "lon": "-74.0", "display_name": "Far from both"},
+            ]
+
+    class DummyClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, *args, **kwargs):
+            return DummyResponse()
+
+    monkeypatch.setattr(geocoder_module.httpx, "AsyncClient", DummyClient)
+    provider = PublicGeocoderProvider()
+    trip = (37.0, -122.0)
+    stop = (37.1, -122.1)
+    items = await provider.candidates_for_store("place", trip, stop_anchor=stop)
+    assert len(items) == 3
+
+    def sum_anchor_d(p) -> float:
+        return haversine_m(trip[0], trip[1], p.lat, p.lng) + haversine_m(
+            stop[0], stop[1], p.lat, p.lng
+        )
+
+    sums = [sum_anchor_d(p) for p in items]
+    assert sums == sorted(sums)
+    assert items[-1].display_address == "Far from both"
 
 
 @pytest.mark.asyncio
@@ -293,8 +303,6 @@ async def test_local_providers_not_implemented():
         await geocoder.geocode_place("90210")
     with pytest.raises(NotImplementedError):
         await geocoder.candidates_for_store("Whole Foods", (0.0, 0.0))
-    with pytest.raises(NotImplementedError):
-        await geocoder.search_places_near("cafe", (0.0, 0.0))
     with pytest.raises(NotImplementedError):
         await router.matrix_minutes([(0.0, 0.0), (1.0, 1.0)])
     with pytest.raises(NotImplementedError):

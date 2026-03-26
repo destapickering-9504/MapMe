@@ -19,7 +19,11 @@ class _FakeGeocoder:
         )
 
     async def candidates_for_store(
-        self, store_query: str, origin: tuple[float, float]
+        self,
+        store_query: str,
+        origin: tuple[float, float],
+        *,
+        stop_anchor: tuple[float, float] | None = None,
     ) -> list[ResolvedLocation]:
         return [
             ResolvedLocation(
@@ -77,6 +81,76 @@ def test_optimize_endpoint_success() -> None:
     assert body["route_geojson_options"][0] is not None
 
 
+def test_optimize_explicit_address_pins_hint_geocode_not_store_search(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When a stop includes a comma address, resolve only that geocode—do not run store candidate search."""
+
+    class _Geo(_FakeGeocoder):
+        async def geocode_place(self, place_query: str) -> ResolvedLocation | None:
+            if "15th" in place_query.lower():
+                return ResolvedLocation(
+                    lat=47.65,
+                    lng=-122.38,
+                    display_address="Pinned from address field, Seattle, WA",
+                )
+            return await super().geocode_place(place_query)
+
+        async def candidates_for_store(
+            self,
+            store_query: str,
+            origin: tuple[float, float],
+            *,
+            stop_anchor: tuple[float, float] | None = None,
+        ) -> list[ResolvedLocation]:
+            # If this runs for the pinned Petco line, we failed to lock the stop.
+            assert "petco" not in store_query.lower()
+            return await super().candidates_for_store(
+                store_query, origin, stop_anchor=stop_anchor
+            )
+
+    monkeypatch.setattr(
+        optimize_module,
+        "build_providers",
+        lambda: (_Geo(), _FakeRouter()),
+    )
+    payload = {
+        "origin_place": "94102",
+        "stores": ["Petco, 2001 15th Ave W", "Whole Foods"],
+        "trip_mode": "round_trip",
+    }
+    response = client.post("/api/optimize", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["stops_resolved"][0]["address"] == "Pinned from address field, Seattle, WA"
+    assert "travel_time_note" in body
+    assert "traffic" in body["travel_time_note"].lower()
+
+
+def test_optimize_stop_address_hint_geocode_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Geo(_FakeGeocoder):
+        async def geocode_place(self, place_query: str) -> ResolvedLocation | None:
+            if "zzzbadhintzzz" in place_query:
+                return None
+            return await super().geocode_place(place_query)
+
+    monkeypatch.setattr(
+        optimize_module,
+        "build_providers",
+        lambda: (_Geo(), _FakeRouter()),
+    )
+    payload = {
+        "origin_place": "94102",
+        "stores": ["Target", "Petco, zzzbadhintzzz"],
+        "trip_mode": "round_trip",
+    }
+    response = client.post("/api/optimize", json=payload)
+    assert response.status_code == 400
+    assert "address" in response.json()["detail"].lower()
+
+
 def test_optimize_prefers_petco_near_other_stop_even_if_petco_first_line(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -84,7 +158,11 @@ def test_optimize_prefers_petco_near_other_stop_even_if_petco_first_line(
 
     class _Geo(_FakeGeocoder):
         async def candidates_for_store(
-            self, store_query: str, origin: tuple[float, float]
+            self,
+            store_query: str,
+            origin: tuple[float, float],
+            *,
+            stop_anchor: tuple[float, float] | None = None,
         ) -> list[ResolvedLocation]:
             q = store_query.lower()
             if "whole" in q:
@@ -108,7 +186,9 @@ def test_optimize_prefers_petco_near_other_stop_even_if_petco_first_line(
                         display_address="Petco, 2001 15th Ave W, Seattle, WA",
                     ),
                 ]
-            return await super().candidates_for_store(store_query, origin)
+            return await super().candidates_for_store(
+                store_query, origin, stop_anchor=stop_anchor
+            )
 
     monkeypatch.setattr(
         optimize_module,
@@ -143,7 +223,11 @@ def test_optimize_geocode_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         async def candidates_for_store(
-            self, store_query: str, origin: tuple[float, float]
+            self,
+            store_query: str,
+            origin: tuple[float, float],
+            *,
+            stop_anchor: tuple[float, float] | None = None,
         ) -> list[ResolvedLocation]:
             return []
 
@@ -177,7 +261,7 @@ def test_optimize_with_destination_place() -> None:
     assert body["destination_address"]
     assert body["destination_lat"] is not None
     assert body["destination_lng"] is not None
-    assert "between start and end" in body["explanation"]
+    assert "end point" in body["explanation"].lower()
 
 
 def test_optimize_one_stop_with_destination_ok() -> None:
@@ -228,10 +312,64 @@ def test_optimize_destination_geocode_not_found(monkeypatch: pytest.MonkeyPatch)
     assert "end location" in response.json()["detail"].lower()
 
 
+def test_optimize_alternatives_use_different_branch_locations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Second/third routes swap in other geocoder hits, not only reorder same pins."""
+
+    class _Multi(_FakeGeocoder):
+        async def candidates_for_store(
+            self,
+            store_query: str,
+            origin: tuple[float, float],
+            *,
+            stop_anchor: tuple[float, float] | None = None,
+        ) -> list[ResolvedLocation]:
+            q = store_query.lower()
+            if "target" in q:
+                return [
+                    ResolvedLocation(
+                        lat=37.78,
+                        lng=-122.41,
+                        display_address="Target, 1 Market St, San Francisco, CA",
+                    ),
+                    ResolvedLocation(
+                        lat=37.72,
+                        lng=-122.48,
+                        display_address="Target, 9th Ave, San Francisco, CA",
+                    ),
+                ]
+            return await super().candidates_for_store(
+                store_query, origin, stop_anchor=stop_anchor
+            )
+
+    monkeypatch.setattr(
+        optimize_module,
+        "build_providers",
+        lambda: (_Multi(), _FakeRouter()),
+    )
+    payload = {
+        "origin_place": "94102",
+        "stores": ["Target", "Whole Foods"],
+        "trip_mode": "round_trip",
+    }
+    response = client.post("/api/optimize", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["alternatives"]) >= 1
+    best_addr = body["best_route"]["ordered_stops"][0]["address"]
+    alt0_addr = body["alternatives"][0]["ordered_stops"][0]["address"]
+    assert best_addr != alt0_addr
+
+
 def test_optimize_store_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     class _NoStores(_FakeGeocoder):
         async def candidates_for_store(
-            self, store_query: str, origin: tuple[float, float]
+            self,
+            store_query: str,
+            origin: tuple[float, float],
+            *,
+            stop_anchor: tuple[float, float] | None = None,
         ) -> list[ResolvedLocation]:
             return []
 
