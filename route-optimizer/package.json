@@ -1,0 +1,12 @@
+{
+  "name": "route-optimizer",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 8000",
+    "test:frontend": "cd frontend && npm test",
+    "test:backend": "cd backend && pytest",
+    "test": "npm run test:frontend && npm run test:backend"
+  }
+}

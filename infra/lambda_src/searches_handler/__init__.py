@@ -1,1 +1,0 @@
-# Searches handler package
