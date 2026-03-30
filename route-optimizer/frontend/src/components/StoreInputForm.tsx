@@ -1,10 +1,27 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { OptimizeRequest } from "../domain/routeTypes";
 import { buildStopSearchQuery } from "../domain/stopQueryBuild";
+import type { SavedLocation } from "../domain/savedLocations";
+import type { SavedStartLocation } from "../domain/savedStartLocations";
 import AddressAutocomplete from "./AddressAutocomplete";
+import StartLocationCombobox from "./StartLocationCombobox";
+import StopPlaceCombobox from "./StopPlaceCombobox";
+
+const NO_SAVED_STARTS: SavedStartLocation[] = [];
+const NO_SAVED_LOCATIONS: SavedLocation[] = [];
+
+export type SaveLocationToProfileResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
 interface Props {
   onSubmit: (payload: OptimizeRequest) => void;
+  /** Named starts from profile; shown in the same field as typed addresses. */
+  savedStartLocations?: SavedStartLocation[];
+  /** Saved locations from profile; same ID cannot be chosen on two stops. */
+  savedLocations?: SavedLocation[];
+  /** When set (signed-in user), stops with “Use specific address” can save name + address to profile. */
+  onSaveLocationToProfile?: (name: string, address: string) => Promise<SaveLocationToProfileResult>;
 }
 
 type StopRow = {
@@ -12,6 +29,7 @@ type StopRow = {
   name: string;
   useSpecificAddress: boolean;
   address: string;
+  savedLocationId: string | null;
 };
 
 function newStopRow(partial?: Partial<Pick<StopRow, "name" | "useSpecificAddress" | "address">>): StopRow {
@@ -23,7 +41,8 @@ function newStopRow(partial?: Partial<Pick<StopRow, "name" | "useSpecificAddress
     id,
     name: partial?.name ?? "",
     useSpecificAddress: partial?.useSpecificAddress ?? false,
-    address: partial?.address ?? ""
+    address: partial?.address ?? "",
+    savedLocationId: null
   };
 }
 
@@ -42,10 +61,43 @@ function rowToQuery(row: StopRow): { ok: true; query: string } | { ok: false; re
   return { ok: true, query: name };
 }
 
-export default function StoreInputForm({ onSubmit }: Props) {
+function savedLocationsSelectableForRow(stops: StopRow[], rowId: string, savedLocations: SavedLocation[]): SavedLocation[] {
+  const row = stops.find((r) => r.id === rowId);
+  const currentId = row?.savedLocationId ?? null;
+  const usedElsewhere = new Set(
+    stops.filter((r) => r.id !== rowId && r.savedLocationId).map((r) => r.savedLocationId as string)
+  );
+  return savedLocations.filter((s) => !usedElsewhere.has(s.id) || s.id === currentId);
+}
+
+function sameSavedPlace(a: string, b: string, c: string, d: string): boolean {
+  return a.trim().toLowerCase() === c.trim().toLowerCase() && b.trim().toLowerCase() === d.trim().toLowerCase();
+}
+
+export default function StoreInputForm({
+  onSubmit,
+  savedStartLocations = NO_SAVED_STARTS,
+  savedLocations = NO_SAVED_LOCATIONS,
+  onSaveLocationToProfile
+}: Props) {
   const [originPlace, setOriginPlace] = useState("");
   const [stops, setStops] = useState<StopRow[]>(() => [newStopRow(), newStopRow()]);
   const [error, setError] = useState<string | null>(null);
+  const [profileSaveBusyId, setProfileSaveBusyId] = useState<string | null>(null);
+  const [profileSaveNote, setProfileSaveNote] = useState<{ stopId: string; kind: "ok" | "err"; text: string } | null>(
+    null
+  );
+  const profileSaveClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (profileSaveClearTimer.current) {
+        clearTimeout(profileSaveClearTimer.current);
+      }
+    };
+  }, []);
+
+  const savedLocationList = useMemo(() => savedLocations, [savedLocations]);
 
   const patchStop = (id: string, patch: Partial<StopRow>) => {
     setStops((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -101,88 +153,171 @@ export default function StoreInputForm({ onSubmit }: Props) {
     });
   };
 
+  const saveStopToProfile = async (stopId: string, name: string, address: string) => {
+    if (!onSaveLocationToProfile) return;
+    setProfileSaveNote(null);
+    setProfileSaveBusyId(stopId);
+    try {
+      const r = await onSaveLocationToProfile(name, address);
+      if (r.ok) {
+        setProfileSaveNote({ stopId, kind: "ok", text: "Saved to your profile." });
+        if (profileSaveClearTimer.current) clearTimeout(profileSaveClearTimer.current);
+        profileSaveClearTimer.current = window.setTimeout(() => {
+          profileSaveClearTimer.current = null;
+          setProfileSaveNote((prev) => (prev?.stopId === stopId && prev.kind === "ok" ? null : prev));
+        }, 4000);
+      } else {
+        setProfileSaveNote({ stopId, kind: "err", text: r.message });
+      }
+    } finally {
+      setProfileSaveBusyId(null);
+    }
+  };
+
   return (
     <section className="planner-card" aria-label="Route planning form">
       <p>
-        We compare <strong>every possible order</strong> of your stops from the start and pick the fastest round trip
-        (you return to your starting location). Add <strong>2–10</strong> stops. Use a name only, or turn on{" "}
-        <strong>Use specific address</strong> to pin a particular location.
+        We compare every order of your stops from your start and pick the fastest <strong>round trip</strong> (you end
+        back where you began). Add at least <strong>2</strong> stops, up to <strong>10</strong>.
       </p>
-      <label htmlFor="origin-place">Starting location</label>
+      <p className="stops-section-title">Starting location</p>
       <p className="muted-small address-autocomplete-help">
-        Type your address and choose a match from the list to finish it, or keep typing your own text.
+        {savedStartLocations.length > 0
+          ? "Pick a saved place from the list or type a street, city, or ZIP."
+          : "Type a street, city, or ZIP."}
       </p>
-      <AddressAutocomplete
+      <StartLocationCombobox
         inputId="origin-place"
         value={originPlace}
         onChange={setOriginPlace}
+        savedStarts={savedStartLocations}
         placeholder="Start typing street, city, or ZIP…"
         ariaLabel="origin-place-input"
       />
 
       <p className="stops-section-title">Stops to visit</p>
-      <p className="muted-small stops-section-hint">Each stop is one store or place. Add or remove rows as needed.</p>
+      <p className="muted-small stops-section-hint">
+        {savedLocationList.length > 0
+          ? 'Each Stop: Pick a saved place from the list or type a name. Check "Use specific address" when you have a specific store in mind'
+          : "Each stop is one store or place. Add or remove rows as needed."}
+      </p>
 
-      {stops.map((row, i) => (
-        <div key={row.id} className="stop-card">
-          <div className="stop-card-header">
-            <span className="stop-card-label">Stop {i + 1}</span>
-            {stops.length > 2 ? (
-              <button
-                type="button"
-                className="stop-remove-btn"
-                onClick={() => removeStop(row.id)}
-                aria-label={`Remove stop ${i + 1}`}
-              >
-                Remove
-              </button>
-            ) : null}
-          </div>
-          <label className="stop-name-label" htmlFor={`stop-name-${row.id}`}>
-            Store or place name
-          </label>
-          <input
-            id={`stop-name-${row.id}`}
-            className="input-field"
-            value={row.name}
-            onChange={(e) => patchStop(row.id, { name: e.target.value })}
-            placeholder="e.g. Target, Whole Foods, Petco"
-            aria-label={`Stop ${i + 1} store or place name`}
-          />
-          <label className="stop-toggle-label">
-            <input
-              type="checkbox"
-              checked={row.useSpecificAddress}
-              onChange={(e) =>
+      {stops.map((row, i) => {
+        const locationOptions = savedLocationsSelectableForRow(stops, row.id, savedLocationList);
+        return (
+          <div key={row.id} className="stop-card">
+            <div className="stop-card-header">
+              <span className="stop-card-label">Stop {i + 1}</span>
+              {stops.length > 2 ? (
+                <button
+                  type="button"
+                  className="stop-remove-btn"
+                  onClick={() => removeStop(row.id)}
+                  aria-label={`Remove stop ${i + 1}`}
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            <label className="stop-name-label" htmlFor={`stop-place-${row.id}`}>
+              Store or place name
+            </label>
+            <StopPlaceCombobox
+              inputId={`stop-place-${row.id}`}
+              value={row.name}
+              savedLocations={locationOptions}
+              includeAddressSuggestions={false}
+              ariaLabel={`Stop ${i + 1} store or place name`}
+              listboxAriaLabel={`Stop ${i + 1} place suggestions`}
+              placeholder={
+                savedLocationList.length > 0
+                  ? "Saved place or type a store name…"
+                  : "e.g. Target, Whole Foods, Petco"
+              }
+              onTypingChange={(name) => patchStop(row.id, { name, savedLocationId: null })}
+              onPickSaved={(loc) =>
                 patchStop(row.id, {
-                  useSpecificAddress: e.target.checked,
-                  ...(e.target.checked ? {} : { address: "" })
+                  savedLocationId: loc.id,
+                  name: loc.name,
+                  address: loc.address,
+                  useSpecificAddress: true
                 })
               }
-              aria-label={`Stop ${i + 1} use specific address`}
+              onPickAddressSuggestion={(label) =>
+                patchStop(row.id, {
+                  name: label,
+                  savedLocationId: null,
+                  useSpecificAddress: false,
+                  address: ""
+                })
+              }
             />
-            Use specific address
-          </label>
-          {row.useSpecificAddress ? (
-            <>
-              <label className="stop-address-label" htmlFor={`stop-address-${row.id}`}>
-                Address for this stop
-              </label>
-              <p className="muted-small address-autocomplete-help">
-                We pin this stop to this address (geocoded as you typed it)—we won&apos;t swap it for another
-                search hit.
-              </p>
-              <AddressAutocomplete
-                inputId={`stop-address-${row.id}`}
-                value={row.address}
-                onChange={(v) => patchStop(row.id, { address: v })}
-                placeholder="Street, city, or ZIP…"
-                ariaLabel={`Stop ${i + 1} specific address`}
+            <label className="stop-toggle-label">
+              <input
+                type="checkbox"
+                checked={row.useSpecificAddress}
+                onChange={(e) =>
+                  patchStop(row.id, {
+                    useSpecificAddress: e.target.checked,
+                    ...(e.target.checked ? {} : { address: "", savedLocationId: null })
+                  })
+                }
+                aria-label={`Stop ${i + 1} use specific address`}
               />
-            </>
-          ) : null}
-        </div>
-      ))}
+              Use specific address
+            </label>
+            {row.useSpecificAddress ? (
+              <>
+                <label className="stop-address-label" htmlFor={`stop-address-${row.id}`}>
+                  Address for this stop
+                </label>
+                <p className="muted-small address-autocomplete-help">
+                  We pin this stop to this address (geocoded as you typed it)—we won&apos;t swap it for another search
+                  hit.
+                </p>
+                <AddressAutocomplete
+                  inputId={`stop-address-${row.id}`}
+                  value={row.address}
+                  onChange={(v) => patchStop(row.id, { address: v, savedLocationId: null })}
+                  placeholder="Street, city, or ZIP…"
+                  ariaLabel={`Stop ${i + 1} specific address`}
+                />
+                {onSaveLocationToProfile && row.name.trim() && row.address.trim() ? (
+                  <div className="stop-save-profile-row">
+                    {row.savedLocationId ? (
+                      <p className="muted-small stop-save-profile-hint">This stop uses a place from your saved locations.</p>
+                    ) : savedLocationList.some((s) => sameSavedPlace(s.name, s.address, row.name, row.address)) ? (
+                      <p className="muted-small stop-save-profile-hint">Already in your saved locations.</p>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="auth-flow-secondary stop-save-profile-btn"
+                          disabled={profileSaveBusyId === row.id}
+                          onClick={() => void saveStopToProfile(row.id, row.name, row.address)}
+                          aria-label={`Save stop ${i + 1} to profile locations`}
+                        >
+                          {profileSaveBusyId === row.id ? "Saving…" : "Save to my locations"}
+                        </button>
+                        {profileSaveNote?.stopId === row.id ? (
+                          <p
+                            role={profileSaveNote.kind === "err" ? "alert" : "status"}
+                            className={
+                              profileSaveNote.kind === "err" ? "stop-save-profile-msg err" : "stop-save-profile-msg ok"
+                            }
+                          >
+                            {profileSaveNote.text}
+                          </p>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        );
+      })}
 
       <button
         type="button"

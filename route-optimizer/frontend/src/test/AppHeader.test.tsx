@@ -1,6 +1,22 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import AppHeader, { persistTheme, readStoredTheme } from "../components/AppHeader";
+import { PROFILE_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+
+function renderHeader(ui: ReactElement) {
+  return render(
+    <MemoryRouter>
+      <Routes>
+        <Route path="/" element={ui} />
+        <Route path={ROUTE_OPTIMIZER_PATH} element={<span>planner</span>} />
+        <Route path={PROFILE_PATH} element={<span>profile</span>} />
+        <Route path={ROUTE_HISTORY_PATH} element={<span>history</span>} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
 
 const origLocalStorage = Object.getOwnPropertyDescriptor(window, "localStorage");
 
@@ -96,14 +112,91 @@ describe("AppHeader", () => {
 
   test("toggles theme via callback", () => {
     const onThemeChange = vi.fn();
-    render(<AppHeader theme="light" onThemeChange={onThemeChange} />);
+    renderHeader(
+      <AppHeader
+        theme="light"
+        onThemeChange={onThemeChange}
+        displayName="Guest"
+        authConfigured={false}
+        isAuthenticated={false}
+        onSignOut={vi.fn()}
+      />
+    );
     fireEvent.click(screen.getByRole("button", { name: /Switch to dark mode/i }));
     expect(onThemeChange).toHaveBeenCalledWith("dark");
   });
 
-  test("opens account menu and closes on outside click", () => {
-    render(<AppHeader theme="light" onThemeChange={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: /Guest/i }));
+  test("guest shows sign in link and no account menu", () => {
+    renderHeader(
+      <AppHeader
+        theme="light"
+        onThemeChange={vi.fn()}
+        displayName="Guest"
+        authConfigured={true}
+        isAuthenticated={false}
+        onSignOut={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Guest/i })).toBeNull();
+  });
+
+  test("authenticated opens menu with profile, history, sign out", () => {
+    const onSignOut = vi.fn();
+    renderHeader(
+      <AppHeader
+        theme="light"
+        onThemeChange={vi.fn()}
+        displayName="alex"
+        authConfigured={true}
+        isAuthenticated={true}
+        onSignOut={onSignOut}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /alex/i }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByText("Signed in as")).toBeTruthy();
+    expect(within(menu).getByText("alex")).toBeTruthy();
+    expect(within(menu).getByRole("menuitem", { name: /optimize route/i })).toBeTruthy();
+    expect(within(menu).getByRole("menuitem", { name: /^profile$/i })).toBeTruthy();
+    expect(within(menu).getByRole("menuitem", { name: /^history$/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: /sign out/i }));
+    expect(onSignOut).toHaveBeenCalled();
+  });
+
+  test("shows profile avatar on trigger and in menu when avatarUrl is set", () => {
+    const url = "https://example.com/avatar.jpg";
+    const { container } = renderHeader(
+      <AppHeader
+        theme="light"
+        onThemeChange={vi.fn()}
+        displayName="alex"
+        avatarUrl={url}
+        authConfigured={true}
+        isAuthenticated={true}
+        onSignOut={vi.fn()}
+      />
+    );
+    const triggerAvatar = container.querySelector(".app-header-user-avatar");
+    expect(triggerAvatar?.getAttribute("src")).toBe(url);
+    fireEvent.click(screen.getByRole("button", { name: /alex/i }));
+    const menu = screen.getByRole("menu");
+    const dropdownAvatar = menu.querySelector(".app-header-dropdown-avatar");
+    expect(dropdownAvatar?.getAttribute("src")).toBe(url);
+  });
+
+  test("authenticated menu closes on outside click", () => {
+    renderHeader(
+      <AppHeader
+        theme="light"
+        onThemeChange={vi.fn()}
+        displayName="alex"
+        authConfigured={true}
+        isAuthenticated={true}
+        onSignOut={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /alex/i }));
     expect(screen.getByRole("menu")).toBeTruthy();
     fireEvent.mouseDown(document.body);
     expect(screen.queryByRole("menu")).toBeNull();

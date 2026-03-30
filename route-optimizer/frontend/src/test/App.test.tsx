@@ -1,6 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import App from "../App";
+import { AuthProvider } from "../auth/AuthContext";
+import AppLayout from "../AppLayout";
+import RouteOptimizerPage from "../pages/RouteOptimizerPage";
+import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 
 describe("App", () => {
   afterEach(() => cleanup());
@@ -61,13 +65,27 @@ describe("App", () => {
     );
   });
 
+  function renderApp() {
+    return render(
+      <MemoryRouter initialEntries={[ROUTE_OPTIMIZER_PATH]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path={ROUTE_OPTIMIZER_PATH} element={<RouteOptimizerPage />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+  }
+
   test("renders heading", () => {
-    render(<App />);
+    renderApp();
     expect(screen.getByRole("heading", { name: /Route Optimizer/i })).toBeTruthy();
   });
 
   test("runs optimization and renders result", async () => {
-    render(<App />);
+    renderApp();
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "94102" }
     });

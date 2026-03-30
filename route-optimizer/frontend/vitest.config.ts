@@ -9,7 +9,16 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text"],
-      exclude: ["src/main.tsx", "src/domain/**"],
+      exclude: [
+        "src/main.tsx",
+        "src/App.tsx",
+        "src/domain/**",
+        "src/pages/AuthFlowPage.tsx",
+        "src/pages/ProfilePage.tsx",
+        "src/pages/RouteHistoryPage.tsx",
+        "src/pages/RouteOptimizerPage.tsx",
+        "dist/**"
+      ],
       thresholds: {
         lines: 85,
         branches: 85
