@@ -2,7 +2,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import AppHeader, { persistTheme, readStoredTheme } from "../components/AppHeader";
+import AppHeader from "../components/AppHeader";
+import { persistTheme, readStoredTheme } from "../theme/themeStorage";
 import { PROFILE_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 
 function renderHeader(ui: ReactElement) {
@@ -110,27 +111,10 @@ describe("AppHeader", () => {
     restoreLocalStorage();
   });
 
-  test("toggles theme via callback", () => {
-    const onThemeChange = vi.fn();
-    renderHeader(
-      <AppHeader
-        theme="light"
-        onThemeChange={onThemeChange}
-        displayName="Guest"
-        authConfigured={false}
-        isAuthenticated={false}
-        onSignOut={vi.fn()}
-      />
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Switch to dark mode/i }));
-    expect(onThemeChange).toHaveBeenCalledWith("dark");
-  });
-
   test("guest shows sign in link and no account menu", () => {
     renderHeader(
       <AppHeader
         theme="light"
-        onThemeChange={vi.fn()}
         displayName="Guest"
         authConfigured={true}
         isAuthenticated={false}
@@ -146,7 +130,6 @@ describe("AppHeader", () => {
     renderHeader(
       <AppHeader
         theme="light"
-        onThemeChange={vi.fn()}
         displayName="alex"
         authConfigured={true}
         isAuthenticated={true}
@@ -169,7 +152,6 @@ describe("AppHeader", () => {
     const { container } = renderHeader(
       <AppHeader
         theme="light"
-        onThemeChange={vi.fn()}
         displayName="alex"
         avatarUrl={url}
         authConfigured={true}
@@ -189,7 +171,6 @@ describe("AppHeader", () => {
     renderHeader(
       <AppHeader
         theme="light"
-        onThemeChange={vi.fn()}
         displayName="alex"
         authConfigured={true}
         isAuthenticated={true}

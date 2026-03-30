@@ -10,6 +10,21 @@ export interface SavedTripRow {
   is_favorite: boolean;
 }
 
+export interface ListSavedTripsPageParams {
+  limit?: number;
+  offset?: number;
+  /** Case-insensitive substring match on title, origin, and stop names (server-side). */
+  search?: string;
+  savedOnly?: boolean;
+  transportMode?: "driving" | "walking" | "transit" | null;
+  newestFirst?: boolean;
+}
+
+export interface ListSavedTripsPageResult {
+  rows: SavedTripRow[];
+  totalCount: number;
+}
+
 function normalizeRow(raw: Record<string, unknown>): SavedTripRow {
   return {
     id: String(raw.id),
@@ -21,14 +36,63 @@ function normalizeRow(raw: Record<string, unknown>): SavedTripRow {
   };
 }
 
-export async function listSavedTrips(): Promise<SavedTripRow[]> {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from("saved_trips")
-    .select("id,user_id,title,payload,created_at,is_favorite")
-    .order("created_at", { ascending: false });
+function parsePageRpcPayload(data: unknown): ListSavedTripsPageResult {
+  let parsed: unknown = data;
+  if (typeof data === "string") {
+    try {
+      parsed = JSON.parse(data) as unknown;
+    } catch {
+      return { rows: [], totalCount: 0 };
+    }
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { rows: [], totalCount: 0 };
+  }
+  const o = parsed as Record<string, unknown>;
+  const totalRaw = o.total_count;
+  const total =
+    typeof totalRaw === "number" && Number.isFinite(totalRaw)
+      ? totalRaw
+      : typeof totalRaw === "string"
+        ? Number(totalRaw)
+        : 0;
+  const rawRows = o.rows;
+  if (!Array.isArray(rawRows)) {
+    return { rows: [], totalCount: Number.isFinite(total) ? total : 0 };
+  }
+  return {
+    totalCount: Number.isFinite(total) ? total : 0,
+    rows: rawRows.map((r) => normalizeRow(r as Record<string, unknown>))
+  };
+}
+
+/**
+ * Paginated saved trips with optional filters. Uses Postgres RPC `list_saved_trips_page`
+ * (see `supabase/schema.sql` or `supabase/functions/list_saved_trips_page.sql`).
+ * Max 100 rows per request (enforced server-side).
+ */
+export async function listSavedTripsPage(params: ListSavedTripsPageParams = {}): Promise<ListSavedTripsPageResult> {
+  if (!supabase) return { rows: [], totalCount: 0 };
+  const {
+    limit = 20,
+    offset = 0,
+    search,
+    savedOnly = false,
+    transportMode = null,
+    newestFirst = true
+  } = params;
+
+  const { data, error } = await supabase.rpc("list_saved_trips_page", {
+    p_limit: limit,
+    p_offset: offset,
+    p_search: search?.trim() ? search.trim() : null,
+    p_saved_only: savedOnly,
+    p_transport_mode: transportMode,
+    p_newest_first: newestFirst
+  });
+
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r) => normalizeRow(r as Record<string, unknown>));
+  return parsePageRpcPayload(data);
 }
 
 export async function insertSavedTrip(payload: OptimizeResponse, title?: string): Promise<void> {

@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const {
-  orderMock,
-  selectMock,
+  rpcMock,
   insertMock,
   eqMock,
   deleteMock,
@@ -11,8 +10,7 @@ const {
   fromMock,
   getUserMock
 } = vi.hoisted(() => ({
-  orderMock: vi.fn(),
-  selectMock: vi.fn(),
+  rpcMock: vi.fn(),
   insertMock: vi.fn(),
   eqMock: vi.fn(),
   deleteMock: vi.fn(),
@@ -22,13 +20,13 @@ const {
   getUserMock: vi.fn()
 }));
 
-selectMock.mockImplementation(() => ({ order: orderMock }));
 deleteMock.mockImplementation(() => ({ eq: eqMock }));
 updateMock.mockImplementation(() => ({ eq: updateEqMock }));
 
 vi.mock("../lib/supabaseClient", () => ({
   supabase: {
     from: fromMock,
+    rpc: rpcMock,
     auth: { getUser: getUserMock }
   },
   supabaseConfigured: true
@@ -39,18 +37,18 @@ describe("savedTripsClient", () => {
     vi.clearAllMocks();
     fromMock.mockImplementation((table: string) => {
       if (table === "saved_trips") {
-        return { select: selectMock, insert: insertMock, delete: deleteMock, update: updateMock };
+        return { insert: insertMock, delete: deleteMock, update: updateMock };
       }
       return {};
     });
-    orderMock.mockResolvedValue({ data: [], error: null });
+    rpcMock.mockResolvedValue({ data: { total_count: 0, rows: [] }, error: null });
     insertMock.mockResolvedValue({ error: null });
     eqMock.mockResolvedValue({ error: null });
     updateEqMock.mockResolvedValue({ error: null });
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
   });
 
-  test("listSavedTrips returns rows", async () => {
+  test("listSavedTripsPage returns rows and total", async () => {
     const row = {
       id: "t1",
       user_id: "user-1",
@@ -59,17 +57,25 @@ describe("savedTripsClient", () => {
       created_at: "2024-01-01T00:00:00Z",
       is_favorite: true
     };
-    orderMock.mockResolvedValueOnce({ data: [row], error: null });
-    const { listSavedTrips } = await import("../api/savedTripsClient");
-    const out = await listSavedTrips();
-    expect(out).toEqual([row]);
-    expect(fromMock).toHaveBeenCalledWith("saved_trips");
+    rpcMock.mockResolvedValueOnce({ data: { total_count: 42, rows: [row] }, error: null });
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    const out = await listSavedTripsPage({ limit: 5, offset: 10, search: "ballard", savedOnly: true });
+    expect(out.totalCount).toBe(42);
+    expect(out.rows).toEqual([expect.objectContaining({ id: "t1", title: "Trip" })]);
+    expect(rpcMock).toHaveBeenCalledWith("list_saved_trips_page", {
+      p_limit: 5,
+      p_offset: 10,
+      p_search: "ballard",
+      p_saved_only: true,
+      p_transport_mode: null,
+      p_newest_first: true
+    });
   });
 
-  test("listSavedTrips throws on error", async () => {
-    orderMock.mockResolvedValueOnce({ data: null, error: { message: "nope" } });
-    const { listSavedTrips } = await import("../api/savedTripsClient");
-    await expect(listSavedTrips()).rejects.toThrow("nope");
+  test("listSavedTripsPage throws on rpc error", async () => {
+    rpcMock.mockResolvedValueOnce({ data: null, error: { message: "nope" } as { message: string } });
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    await expect(listSavedTripsPage()).rejects.toThrow("nope");
   });
 
   test("insertSavedTrip requires user", async () => {

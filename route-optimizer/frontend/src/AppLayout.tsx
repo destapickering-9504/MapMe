@@ -1,22 +1,14 @@
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import "./App.css";
 import { useAuth } from "./auth/AuthContext";
-import AppHeader, { persistTheme, readStoredTheme, type ThemeMode } from "./components/AppHeader";
+import AppHeader from "./components/AppHeader";
+import { ThemeProvider, useTheme } from "./theme/ThemeContext";
 
-export default function AppLayout() {
+function AppLayoutInner() {
   const navigate = useNavigate();
   const { user, loading: authLoading, configured, signOut } = useAuth();
-  const [theme, setTheme] = useState<ThemeMode>(() => readStoredTheme());
-
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    persistTheme(theme);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.setAttribute("content", theme === "dark" ? "#0f1623" : "#FEA993");
-    }
-  }, [theme]);
+  const { theme } = useTheme();
 
   const displayName = useMemo(() => {
     if (authLoading && configured) return "…";
@@ -42,7 +34,6 @@ export default function AppLayout() {
     <div className="app-layout">
       <AppHeader
         theme={theme}
-        onThemeChange={setTheme}
         displayName={displayName}
         avatarUrl={avatarUrl}
         authConfigured={configured}
@@ -51,5 +42,13 @@ export default function AppLayout() {
       />
       <Outlet />
     </div>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <ThemeProvider>
+      <AppLayoutInner />
+    </ThemeProvider>
   );
 }

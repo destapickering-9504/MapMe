@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  listSavedTrips,
-  setSavedTripFavorite,
-  type SavedTripRow
-} from "../api/savedTripsClient";
+import { listSavedTripsPage, setSavedTripFavorite, type SavedTripRow } from "../api/savedTripsClient";
 import type { OptimizeResponse } from "../domain/routeTypes";
 import { useAuth } from "../auth/AuthContext";
 import { ROUTE_HISTORY_PATH } from "../routes/paths";
@@ -41,7 +37,12 @@ export default function SavedTripsPanel({ currentResult: _currentResult, onLoadT
     setLoading(true);
     setError(null);
     try {
-      const list = await listSavedTrips();
+      const { rows: list } = await listSavedTripsPage({
+        limit: 100,
+        offset: 0,
+        savedOnly: true,
+        newestFirst: true
+      });
       setRows(list);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load favorites");

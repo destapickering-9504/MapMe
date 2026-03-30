@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { fetchAddressSuggestions, type AddressSuggestion } from "../api/addressSuggestClient";
-import { savedStartToOriginQuery, type SavedStartLocation } from "../domain/savedStartLocations";
+import { profilePlaceToOriginQuery, type ProfileSavedPlace } from "../domain/profileSavedPlaces";
 
 const DEBOUNCE_MS = 280;
 const BLUR_CLOSE_MS = 200;
@@ -8,20 +8,20 @@ const BLUR_CLOSE_MS = 200;
 type RowKind = "saved" | "api";
 
 type CombinedRow =
-  | { kind: "saved"; saved: SavedStartLocation }
+  | { kind: "saved"; saved: ProfileSavedPlace }
   | { kind: "api"; api: AddressSuggestion };
 
 interface Props {
   value: string;
   onChange: (value: string) => void;
-  savedStarts: SavedStartLocation[];
+  savedPlaces: ProfileSavedPlace[];
   inputId: string;
   placeholder?: string;
   ariaLabel: string;
   className?: string;
 }
 
-function savedMatchesQuery(s: SavedStartLocation, needle: string): boolean {
+function savedMatchesQuery(s: ProfileSavedPlace, needle: string): boolean {
   if (!needle) return true;
   const n = needle.toLowerCase();
   return (
@@ -34,7 +34,7 @@ function savedMatchesQuery(s: SavedStartLocation, needle: string): boolean {
 export default function StartLocationCombobox({
   value,
   onChange,
-  savedStarts,
+  savedPlaces,
   inputId,
   placeholder,
   ariaLabel,
@@ -52,8 +52,8 @@ export default function StartLocationCombobox({
   const suppressOpenFromRowsEffectRef = useRef(false);
 
   const filteredSaved = useMemo(
-    () => savedStarts.filter((s) => savedMatchesQuery(s, value.trim())),
-    [savedStarts, value]
+    () => savedPlaces.filter((s) => savedMatchesQuery(s, value.trim())),
+    [savedPlaces, value]
   );
 
   const runSuggest = useCallback((q: string) => {
@@ -114,7 +114,7 @@ export default function StartLocationCombobox({
 
   const pickRow = (row: CombinedRow) => {
     if (row.kind === "saved") {
-      onChange(savedStartToOriginQuery(row.saved));
+      onChange(profilePlaceToOriginQuery(row.saved));
     } else {
       onChange(row.api.label);
     }

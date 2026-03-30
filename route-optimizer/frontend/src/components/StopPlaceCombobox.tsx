@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { fetchAddressSuggestions, type AddressSuggestion } from "../api/addressSuggestClient";
-import type { SavedLocation } from "../domain/savedLocations";
+import type { ProfileSavedPlace } from "../domain/profileSavedPlaces";
 
 const DEBOUNCE_MS = 280;
 const BLUR_CLOSE_MS = 200;
 
-type CombinedRow = { kind: "saved"; saved: SavedLocation } | { kind: "api"; api: AddressSuggestion };
+type CombinedRow = { kind: "saved"; saved: ProfileSavedPlace } | { kind: "api"; api: AddressSuggestion };
 
 interface Props {
   value: string;
-  savedLocations: SavedLocation[];
+  savedPlaces: ProfileSavedPlace[];
   /** When false (e.g. “Use specific address” is on), only saved rows appear — no geocode suggestions on this field. */
   includeAddressSuggestions: boolean;
   inputId: string;
@@ -18,25 +18,29 @@ interface Props {
   placeholder?: string;
   className?: string;
   onTypingChange: (name: string) => void;
-  onPickSaved: (loc: SavedLocation) => void;
+  onPickSaved: (loc: ProfileSavedPlace) => void;
   onPickAddressSuggestion: (label: string) => void;
 }
 
-function savedMatchesQuery(s: SavedLocation, needle: string): boolean {
+function savedMatchesQuery(s: ProfileSavedPlace, needle: string): boolean {
   if (!needle) return true;
   const n = needle.toLowerCase();
-  return s.name.toLowerCase().includes(n) || s.address.toLowerCase().includes(n);
+  return (
+    s.label.toLowerCase().includes(n) ||
+    s.address.toLowerCase().includes(n) ||
+    (s.query || "").toLowerCase().includes(n)
+  );
 }
 
-function formatSavedRow(s: SavedLocation): string {
+function formatSavedRow(s: ProfileSavedPlace): string {
   const line = s.address.trim();
   const short = line.length > 52 ? `${line.slice(0, 52)}…` : line;
-  return `${s.name} — ${short}`;
+  return `${s.label} — ${short}`;
 }
 
 export default function StopPlaceCombobox({
   value,
-  savedLocations,
+  savedPlaces,
   includeAddressSuggestions,
   inputId,
   ariaLabel,
@@ -58,8 +62,8 @@ export default function StopPlaceCombobox({
   const suppressOpenFromRowsEffectRef = useRef(false);
 
   const filteredSaved = useMemo(
-    () => savedLocations.filter((s) => savedMatchesQuery(s, value.trim())),
-    [savedLocations, value]
+    () => savedPlaces.filter((s) => savedMatchesQuery(s, value.trim())),
+    [savedPlaces, value]
   );
 
   const runSuggest = useCallback(

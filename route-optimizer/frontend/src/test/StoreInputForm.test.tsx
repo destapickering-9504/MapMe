@@ -10,8 +10,8 @@ describe("StoreInputForm", () => {
     render(
       <StoreInputForm
         onSubmit={onSubmit}
-        savedStartLocations={[
-          { id: "h1", label: "Home", address: "Oakland, CA 94102", query: "Home, Oakland, CA 94102" }
+        savedPlaces={[
+          { id: "h1", label: "Home", address: "Oakland, CA 94102", query: "Oakland, CA 94102" }
         ]}
       />
     );
@@ -154,14 +154,14 @@ describe("StoreInputForm", () => {
 
   test("same saved location cannot be selected on two stops", async () => {
     const onSubmit = vi.fn();
-    const savedLocations = [
-      { id: "s1", name: "Target", address: "100 Main St" },
-      { id: "s2", name: "Whole Foods", address: "200 Oak Ave" }
+    const savedPlaces = [
+      { id: "s1", label: "Target", address: "100 Main St", query: "100 Main St" },
+      { id: "s2", label: "Whole Foods", address: "200 Oak Ave", query: "200 Oak Ave" }
     ];
     render(
       <StoreInputForm
         onSubmit={onSubmit}
-        savedLocations={savedLocations}
+        savedPlaces={savedPlaces}
       />
     );
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
@@ -242,7 +242,7 @@ describe("StoreInputForm", () => {
     render(
       <StoreInputForm
         onSubmit={vi.fn()}
-        savedLocations={[{ id: "x", name: "Petco", address: "500 Pine St" }]}
+        savedPlaces={[{ id: "x", label: "Petco", address: "500 Pine St", query: "500 Pine St" }]}
         onSaveLocationToProfile={vi.fn()}
       />
     );
@@ -253,7 +253,7 @@ describe("StoreInputForm", () => {
     fireEvent.change(screen.getByLabelText("Stop 1 specific address"), {
       target: { value: "500 Pine St" }
     });
-    expect(screen.getByText(/Already in your saved locations/i)).toBeTruthy();
+    expect(screen.getByText(/Already in your saved places/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Save stop 1 to profile locations/i })).toBeNull();
   });
 });

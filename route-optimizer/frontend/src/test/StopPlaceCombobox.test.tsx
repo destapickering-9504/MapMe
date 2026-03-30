@@ -2,17 +2,19 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import StopPlaceCombobox from "../components/StopPlaceCombobox";
-import type { SavedLocation } from "../domain/savedLocations";
+import type { ProfileSavedPlace } from "../domain/profileSavedPlaces";
 
-const NO_SAVED: SavedLocation[] = [];
-const savedTarget: SavedLocation[] = [{ id: "t1", name: "Target", address: "100 Main St" }];
+const NO_SAVED: ProfileSavedPlace[] = [];
+const savedTarget: ProfileSavedPlace[] = [
+  { id: "t1", label: "Target", address: "100 Main St", query: "100 Main St" }
+];
 
 function Controlled({
-  savedLocations = NO_SAVED,
+  savedPlaces = NO_SAVED,
   includeAddressSuggestions = true,
   initialValue = ""
 }: {
-  savedLocations?: SavedLocation[];
+  savedPlaces?: ProfileSavedPlace[];
   includeAddressSuggestions?: boolean;
   initialValue?: string;
 }) {
@@ -23,7 +25,7 @@ function Controlled({
       <StopPlaceCombobox
         inputId="spc-test"
         value={value}
-        savedLocations={savedLocations}
+        savedPlaces={savedPlaces}
         includeAddressSuggestions={includeAddressSuggestions}
         ariaLabel="stop-place-test"
         onTypingChange={(n) => {
@@ -32,7 +34,7 @@ function Controlled({
         }}
         onPickSaved={(loc) => {
           setPicked(`saved:${loc.id}`);
-          setValue(loc.name);
+          setValue(loc.label);
         }}
         onPickAddressSuggestion={(label) => {
           setPicked(`api:${label}`);
@@ -63,7 +65,7 @@ describe("StopPlaceCombobox", () => {
   });
 
   test("focus lists saved places and applies saved pick", async () => {
-    render(<Controlled savedLocations={savedTarget} />);
+    render(<Controlled savedPlaces={savedTarget} />);
     const input = screen.getByLabelText("stop-place-test");
     fireEvent.focus(input);
     await screen.findByRole("listbox");
@@ -83,8 +85,10 @@ describe("StopPlaceCombobox", () => {
   });
 
   test("saved and API rows show section divider when both exist", async () => {
-    const office: SavedLocation[] = [{ id: "o1", name: "Office", address: "456 Oak Street, Town, USA" }];
-    render(<Controlled savedLocations={office} />);
+    const office: ProfileSavedPlace[] = [
+      { id: "o1", label: "Office", address: "456 Oak Street, Town, USA", query: "456 Oak Street, Town, USA" }
+    ];
+    render(<Controlled savedPlaces={office} />);
     const input = screen.getByLabelText("stop-place-test");
     fireEvent.change(input, { target: { value: "456 oak" } });
     fireEvent.focus(input);
@@ -93,7 +97,7 @@ describe("StopPlaceCombobox", () => {
   });
 
   test("skips API fetch when includeAddressSuggestions is false", async () => {
-    render(<Controlled savedLocations={savedTarget} includeAddressSuggestions={false} />);
+    render(<Controlled savedPlaces={savedTarget} includeAddressSuggestions={false} />);
     vi.mocked(fetch).mockClear();
     const input = screen.getByLabelText("stop-place-test");
     fireEvent.focus(input);

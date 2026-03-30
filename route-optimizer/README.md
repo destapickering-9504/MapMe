@@ -13,7 +13,8 @@ Local-first store route optimizer built with React + FastAPI.
 ## Supabase (sign-in + saved routes)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. **SQL**: In the Supabase dashboard, open **SQL Editor**, paste and run `supabase/schema.sql` from this repo (creates `saved_trips` + row-level security).
+2. **SQL**: In the Supabase dashboard, open **SQL Editor**, paste and run `supabase/schema.sql` (all-in-one). Alternatively run the modular files in order: `supabase/tables/saved_trips.sql`, `supabase/storage/avatars_bucket.sql`, `supabase/functions/list_saved_trips_page.sql`. After editing those modules, regenerate the bundle with `supabase/build-schema.sh`. This creates `saved_trips` + RLS, the **`list_saved_trips_page`** RPC for History, and the **avatars** Storage bucket with policies. Existing projects that already have the table can run only `supabase/functions/list_saved_trips_page.sql` to add or update the RPC.
+   - **Profile photo & cover uploads** use that bucket at paths `{your-user-id}/avatar` and `{your-user-id}/profile-banner`. If the app shows errors like **bucket not found** or **row-level security** on upload, enable **Storage** on the project and re-run the SQL block for `storage.buckets` / `storage.objects` policies.
 3. **API keys**: **Project Settings → API** (or **Connect**) — copy **Project URL** and the **publishable** client key (`sb_publishable_…`) or legacy **anon** JWT (`eyJ…`). Put the key in `VITE_SUPABASE_ANON_KEY` (name is historical; the value can be either key type Supabase shows for browser clients).
 4. **Frontend env**: `cd frontend && cp .env.example .env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 

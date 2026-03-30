@@ -5,9 +5,9 @@ import SavedTripsPanel from "../components/SavedTripsPanel";
 import type { OptimizeResponse } from "../domain/routeTypes";
 import { ROUTE_HISTORY_PATH } from "../routes/paths";
 
-const { useAuthMock, listSavedTrips, setSavedTripFavorite } = vi.hoisted(() => ({
+const { useAuthMock, listSavedTripsPage, setSavedTripFavorite } = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
-  listSavedTrips: vi.fn(),
+  listSavedTripsPage: vi.fn(),
   setSavedTripFavorite: vi.fn()
 }));
 
@@ -16,7 +16,7 @@ vi.mock("../auth/AuthContext", () => ({
 }));
 
 vi.mock("../api/savedTripsClient", () => ({
-  listSavedTrips: (...args: unknown[]) => listSavedTrips(...args),
+  listSavedTripsPage: (...args: unknown[]) => listSavedTripsPage(...args),
   setSavedTripFavorite: (...args: unknown[]) => setSavedTripFavorite(...args)
 }));
 
@@ -48,7 +48,7 @@ const samplePayload: OptimizeResponse = {
 describe("SavedTripsPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    listSavedTrips.mockResolvedValue([]);
+    listSavedTripsPage.mockResolvedValue({ rows: [], totalCount: 0 });
     setSavedTripFavorite.mockResolvedValue(undefined);
   });
 
@@ -83,22 +83,25 @@ describe("SavedTripsPanel", () => {
       user: { id: "u1" },
       configured: true
     });
-    listSavedTrips.mockResolvedValue([
-      {
-        id: "row-1",
-        user_id: "u1",
-        title: "Mine",
-        payload: samplePayload,
-        created_at: "2024-06-01T12:00:00Z",
-        is_favorite: false
-      }
-    ]);
+    listSavedTripsPage.mockResolvedValue({
+      rows: [
+        {
+          id: "row-1",
+          user_id: "u1",
+          title: "Mine",
+          payload: samplePayload,
+          created_at: "2024-06-01T12:00:00Z",
+          is_favorite: false
+        }
+      ],
+      totalCount: 1
+    });
     render(
       <MemoryRouter>
         <SavedTripsPanel currentResult={null} onLoadTrip={vi.fn()} />
       </MemoryRouter>
     );
-    await waitFor(() => expect(listSavedTrips).toHaveBeenCalled());
+    await waitFor(() => expect(listSavedTripsPage).toHaveBeenCalled());
     expect(screen.getByRole("heading", { name: /favorite routes/i })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^load$/i })).toBeNull();
   });
@@ -110,16 +113,19 @@ describe("SavedTripsPanel", () => {
       user: { id: "u1" },
       configured: true
     });
-    listSavedTrips.mockResolvedValue([
-      {
-        id: "row-1",
-        user_id: "u1",
-        title: "Mine",
-        payload: samplePayload,
-        created_at: "2024-06-01T12:00:00Z",
-        is_favorite: true
-      }
-    ]);
+    listSavedTripsPage.mockResolvedValue({
+      rows: [
+        {
+          id: "row-1",
+          user_id: "u1",
+          title: "Mine",
+          payload: samplePayload,
+          created_at: "2024-06-01T12:00:00Z",
+          is_favorite: true
+        }
+      ],
+      totalCount: 1
+    });
     render(
       <MemoryRouter>
         <SavedTripsPanel currentResult={null} onLoadTrip={onLoad} />
@@ -138,18 +144,21 @@ describe("SavedTripsPanel", () => {
       user: { id: "u1" },
       configured: true
     });
-    listSavedTrips
-      .mockResolvedValueOnce([
-        {
-          id: "row-1",
-          user_id: "u1",
-          title: "Mine",
-          payload: samplePayload,
-          created_at: "2024-06-01T12:00:00Z",
-          is_favorite: true
-        }
-      ])
-      .mockResolvedValueOnce([]);
+    listSavedTripsPage
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "row-1",
+            user_id: "u1",
+            title: "Mine",
+            payload: samplePayload,
+            created_at: "2024-06-01T12:00:00Z",
+            is_favorite: true
+          }
+        ],
+        totalCount: 1
+      })
+      .mockResolvedValueOnce({ rows: [], totalCount: 0 });
     render(
       <MemoryRouter>
         <SavedTripsPanel currentResult={null} onLoadTrip={vi.fn()} />
@@ -158,6 +167,6 @@ describe("SavedTripsPanel", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /^unstar$/i })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /^unstar$/i }));
     await waitFor(() => expect(setSavedTripFavorite).toHaveBeenCalledWith("row-1", false));
-    expect(listSavedTrips).toHaveBeenCalledTimes(2);
+    expect(listSavedTripsPage).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,44 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MapMeLogoMark } from "./MapMeLogo";
-import { PROFILE_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
-
-export type ThemeMode = "light" | "dark";
-
-const THEME_STORAGE_KEY = "route-optimizer-theme";
-
-function safeLocalStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const ls = window.localStorage;
-    if (!ls || typeof ls.getItem !== "function" || typeof ls.setItem !== "function") {
-      return null;
-    }
-    return ls;
-  } catch {
-    return null;
-  }
-}
-
-export function readStoredTheme(): ThemeMode {
-  const ls = safeLocalStorage();
-  if (!ls) return "light";
-  return ls.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
-}
-
-export function persistTheme(mode: ThemeMode) {
-  const ls = safeLocalStorage();
-  if (!ls) return;
-  try {
-    ls.setItem(THEME_STORAGE_KEY, mode);
-  } catch {
-    /* private mode / quota */
-  }
-}
+import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+import type { ThemeMode } from "../theme/themeStorage";
 
 interface Props {
   theme: ThemeMode;
-  onThemeChange: (mode: ThemeMode) => void;
   displayName: string;
   /** Public URL from `user_metadata.avatar_url` (e.g. after profile photo upload). */
   avatarUrl?: string | null;
@@ -49,7 +16,6 @@ interface Props {
 
 export default function AppHeader({
   theme,
-  onThemeChange,
   displayName,
   avatarUrl = null,
   authConfigured,
@@ -70,10 +36,6 @@ export default function AppHeader({
     return () => document.removeEventListener("mousedown", close);
   }, [menuOpen]);
 
-  const toggleTheme = () => {
-    onThemeChange(theme === "light" ? "dark" : "light");
-  };
-
   return (
     <header className="app-header" role="banner">
       <div className="app-header-inner">
@@ -86,25 +48,6 @@ export default function AppHeader({
         </Link>
 
         <div className="app-header-actions">
-          <button
-            type="button"
-            className="app-header-icon-btn"
-            onClick={toggleTheme}
-            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            aria-pressed={theme === "dark"}
-            title={theme === "light" ? "Dark mode" : "Light mode"}
-          >
-            {theme === "light" ? (
-              <span className="app-header-theme-icon" aria-hidden>
-                🌙
-              </span>
-            ) : (
-              <span className="app-header-theme-icon" aria-hidden>
-                ☀️
-              </span>
-            )}
-          </button>
-
           {!isAuthenticated ? (
             <Link to="/" className="app-header-sign-in-link">
               Sign in
@@ -164,36 +107,6 @@ export default function AppHeader({
                         <span className="app-header-dropdown-identity-name">{displayName}</span>
                       </div>
                     </div>
-                  </li>
-                  <li role="none">
-                    <Link
-                      to={ROUTE_OPTIMIZER_PATH}
-                      className="app-header-dropdown-item app-header-dropdown-link"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Optimize route
-                    </Link>
-                  </li>
-                  <li role="none">
-                    <Link
-                      to={PROFILE_PATH}
-                      className="app-header-dropdown-item app-header-dropdown-link"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Profile
-                    </Link>
-                  </li>
-                  <li role="none">
-                    <Link
-                      to={ROUTE_HISTORY_PATH}
-                      className="app-header-dropdown-item app-header-dropdown-link"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      History
-                    </Link>
                   </li>
                   <li role="none">
                     <button

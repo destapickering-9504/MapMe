@@ -2,19 +2,19 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import StartLocationCombobox from "../components/StartLocationCombobox";
-import type { SavedStartLocation } from "../domain/savedStartLocations";
+import type { ProfileSavedPlace } from "../domain/profileSavedPlaces";
 
-const NO_SAVED: SavedStartLocation[] = [];
+const NO_SAVED: ProfileSavedPlace[] = [];
 
-const savedHome: SavedStartLocation[] = [
+const savedHome: ProfileSavedPlace[] = [
   { id: "h1", label: "Home", address: "123 Main St", query: "123 Main St" }
 ];
 
 function Controlled({
-  savedStarts = NO_SAVED,
+  savedPlaces = NO_SAVED,
   initialValue = ""
 }: {
-  savedStarts?: SavedStartLocation[];
+  savedPlaces?: ProfileSavedPlace[];
   initialValue?: string;
 }) {
   const [value, setValue] = useState(initialValue);
@@ -23,7 +23,7 @@ function Controlled({
       inputId="slc-test"
       value={value}
       onChange={setValue}
-      savedStarts={savedStarts}
+      savedPlaces={savedPlaces}
       ariaLabel="start-combo-test"
     />
   );
@@ -48,7 +48,7 @@ describe("StartLocationCombobox", () => {
   });
 
   test("focus lists saved starts and fills on pick", async () => {
-    render(<Controlled savedStarts={savedHome} />);
+    render(<Controlled savedPlaces={savedHome} />);
     const input = screen.getByLabelText("start-combo-test");
     fireEvent.focus(input);
     await screen.findByRole("listbox");
@@ -67,10 +67,10 @@ describe("StartLocationCombobox", () => {
   });
 
   test("saved rows and API rows show a section divider when both exist", async () => {
-    const office: SavedStartLocation[] = [
+    const office: ProfileSavedPlace[] = [
       { id: "o1", label: "Office", address: "456 Oak Street, Town, USA", query: "456 Oak Street, Town, USA" }
     ];
-    render(<Controlled savedStarts={office} />);
+    render(<Controlled savedPlaces={office} />);
     const input = screen.getByLabelText("start-combo-test");
     fireEvent.change(input, { target: { value: "456 oak" } });
     fireEvent.focus(input);
@@ -79,7 +79,7 @@ describe("StartLocationCombobox", () => {
   });
 
   test("Escape closes the list", async () => {
-    render(<Controlled savedStarts={savedHome} />);
+    render(<Controlled savedPlaces={savedHome} />);
     const input = screen.getByLabelText("start-combo-test");
     fireEvent.focus(input);
     await screen.findByRole("listbox");

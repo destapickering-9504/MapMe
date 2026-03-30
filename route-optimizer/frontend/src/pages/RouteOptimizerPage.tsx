@@ -8,11 +8,11 @@ import SavedTripsPanel from "../components/SavedTripsPanel";
 import StoreInputForm, { type SaveLocationToProfileResult } from "../components/StoreInputForm";
 import type { OptimizeRequest, OptimizeResponse } from "../domain/routeTypes";
 import {
-  createSavedLocationId,
-  parseSavedLocations,
-  toSavedLocationsMetadataPayload
-} from "../domain/savedLocations";
-import { parseSavedStartLocations } from "../domain/savedStartLocations";
+  createProfileSavedPlaceId,
+  parseProfileSavedPlaces,
+  profileSavedPlacesUserDataUpdate
+} from "../domain/profileSavedPlaces";
+import { computeStartLocationQuery } from "../domain/savedStartLocations";
 import { useOptimizeRoute } from "../hooks/useOptimizeRoute";
 import { supabase } from "../lib/supabaseClient";
 import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
@@ -32,13 +32,8 @@ export const RESTORE_TRIP_STATE_KEY = "restoreTrip";
 export default function RouteOptimizerPage() {
   const { user, configured } = useAuth();
 
-  const savedStartLocations = useMemo(
-    () =>
-      user ? parseSavedStartLocations(user.user_metadata as Record<string, unknown>) : [],
-    [user]
-  );
-  const savedLocations = useMemo(
-    () => (user ? parseSavedLocations(user.user_metadata as Record<string, unknown>) : []),
+  const savedPlaces = useMemo(
+    () => (user ? parseProfileSavedPlaces(user.user_metadata as Record<string, unknown>) : []),
     [user]
   );
   const navigate = useNavigate();
@@ -90,13 +85,16 @@ export default function RouteOptimizerPage() {
         return { ok: false, message: "Add a name and address first." };
       }
       const meta = user.user_metadata as Record<string, unknown>;
-      const current = parseSavedLocations(meta);
-      if (current.some((x) => x.name.toLowerCase() === n.toLowerCase() && x.address.toLowerCase() === a.toLowerCase())) {
-        return { ok: false, message: "This place is already in your saved locations." };
+      const current = parseProfileSavedPlaces(meta);
+      if (current.some((x) => x.label.toLowerCase() === n.toLowerCase() && x.address.toLowerCase() === a.toLowerCase())) {
+        return { ok: false, message: "This place is already in your saved places." };
       }
-      const next = [...current, { id: createSavedLocationId(), name: n, address: a }];
+      const next = [
+        ...current,
+        { id: createProfileSavedPlaceId(), label: n, address: a, query: computeStartLocationQuery(n, a) }
+      ];
       const { error: err } = await supabase.auth.updateUser({
-        data: { saved_locations: toSavedLocationsMetadataPayload(next) }
+        data: profileSavedPlacesUserDataUpdate(next)
       });
       if (err) return { ok: false, message: err.message };
       return { ok: true };
@@ -114,8 +112,7 @@ export default function RouteOptimizerPage() {
         <div className="tab-panel">
           <StoreInputForm
             onSubmit={handleOptimize}
-            savedStartLocations={savedStartLocations}
-            savedLocations={savedLocations}
+            savedPlaces={savedPlaces}
             onSaveLocationToProfile={user && configured && supabase ? saveLocationToProfile : undefined}
           />
           {loading && <p className="status-text">Optimizing...</p>}

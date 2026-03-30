@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OptimizeRequest } from "../domain/routeTypes";
 import { buildStopSearchQuery } from "../domain/stopQueryBuild";
-import type { SavedLocation } from "../domain/savedLocations";
-import type { SavedStartLocation } from "../domain/savedStartLocations";
+import type { ProfileSavedPlace } from "../domain/profileSavedPlaces";
 import AddressAutocomplete from "./AddressAutocomplete";
 import StartLocationCombobox from "./StartLocationCombobox";
 import StopPlaceCombobox from "./StopPlaceCombobox";
 
-const NO_SAVED_STARTS: SavedStartLocation[] = [];
-const NO_SAVED_LOCATIONS: SavedLocation[] = [];
+const NO_SAVED_PLACES: ProfileSavedPlace[] = [];
 
 export type SaveLocationToProfileResult =
   | { ok: true }
@@ -16,10 +14,8 @@ export type SaveLocationToProfileResult =
 
 interface Props {
   onSubmit: (payload: OptimizeRequest) => void;
-  /** Named starts from profile; shown in the same field as typed addresses. */
-  savedStartLocations?: SavedStartLocation[];
-  /** Saved locations from profile; same ID cannot be chosen on two stops. */
-  savedLocations?: SavedLocation[];
+  /** Profile places: same list for trip start and stop rows; a place ID cannot be on two stops at once. */
+  savedPlaces?: ProfileSavedPlace[];
   /** When set (signed-in user), stops with “Use specific address” can save name + address to profile. */
   onSaveLocationToProfile?: (name: string, address: string) => Promise<SaveLocationToProfileResult>;
 }
@@ -61,13 +57,13 @@ function rowToQuery(row: StopRow): { ok: true; query: string } | { ok: false; re
   return { ok: true, query: name };
 }
 
-function savedLocationsSelectableForRow(stops: StopRow[], rowId: string, savedLocations: SavedLocation[]): SavedLocation[] {
+function savedPlacesSelectableForRow(stops: StopRow[], rowId: string, savedPlaces: ProfileSavedPlace[]): ProfileSavedPlace[] {
   const row = stops.find((r) => r.id === rowId);
   const currentId = row?.savedLocationId ?? null;
   const usedElsewhere = new Set(
     stops.filter((r) => r.id !== rowId && r.savedLocationId).map((r) => r.savedLocationId as string)
   );
-  return savedLocations.filter((s) => !usedElsewhere.has(s.id) || s.id === currentId);
+  return savedPlaces.filter((s) => !usedElsewhere.has(s.id) || s.id === currentId);
 }
 
 function sameSavedPlace(a: string, b: string, c: string, d: string): boolean {
@@ -76,8 +72,7 @@ function sameSavedPlace(a: string, b: string, c: string, d: string): boolean {
 
 export default function StoreInputForm({
   onSubmit,
-  savedStartLocations = NO_SAVED_STARTS,
-  savedLocations = NO_SAVED_LOCATIONS,
+  savedPlaces = NO_SAVED_PLACES,
   onSaveLocationToProfile
 }: Props) {
   const [originPlace, setOriginPlace] = useState("");
@@ -87,7 +82,7 @@ export default function StoreInputForm({
   const [profileSaveNote, setProfileSaveNote] = useState<{ stopId: string; kind: "ok" | "err"; text: string } | null>(
     null
   );
-  const profileSaveClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const profileSaveClearTimer = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -97,7 +92,7 @@ export default function StoreInputForm({
     };
   }, []);
 
-  const savedLocationList = useMemo(() => savedLocations, [savedLocations]);
+  const savedPlaceList = useMemo(() => savedPlaces, [savedPlaces]);
 
   const patchStop = (id: string, patch: Partial<StopRow>) => {
     setStops((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -182,7 +177,7 @@ export default function StoreInputForm({
       </p>
       <p className="stops-section-title">Starting location</p>
       <p className="muted-small address-autocomplete-help">
-        {savedStartLocations.length > 0
+        {savedPlaces.length > 0
           ? "Pick a saved place from the list or type a street, city, or ZIP."
           : "Type a street, city, or ZIP."}
       </p>
@@ -190,20 +185,20 @@ export default function StoreInputForm({
         inputId="origin-place"
         value={originPlace}
         onChange={setOriginPlace}
-        savedStarts={savedStartLocations}
+        savedPlaces={savedPlaces}
         placeholder="Start typing street, city, or ZIP…"
         ariaLabel="origin-place-input"
       />
 
       <p className="stops-section-title">Stops to visit</p>
       <p className="muted-small stops-section-hint">
-        {savedLocationList.length > 0
+        {savedPlaceList.length > 0
           ? 'Each Stop: Pick a saved place from the list or type a name. Check "Use specific address" when you have a specific store in mind'
           : "Each stop is one store or place. Add or remove rows as needed."}
       </p>
 
       {stops.map((row, i) => {
-        const locationOptions = savedLocationsSelectableForRow(stops, row.id, savedLocationList);
+        const placeOptions = savedPlacesSelectableForRow(stops, row.id, savedPlaceList);
         return (
           <div key={row.id} className="stop-card">
             <div className="stop-card-header">
@@ -225,12 +220,12 @@ export default function StoreInputForm({
             <StopPlaceCombobox
               inputId={`stop-place-${row.id}`}
               value={row.name}
-              savedLocations={locationOptions}
+              savedPlaces={placeOptions}
               includeAddressSuggestions={false}
               ariaLabel={`Stop ${i + 1} store or place name`}
               listboxAriaLabel={`Stop ${i + 1} place suggestions`}
               placeholder={
-                savedLocationList.length > 0
+                savedPlaceList.length > 0
                   ? "Saved place or type a store name…"
                   : "e.g. Target, Whole Foods, Petco"
               }
@@ -238,7 +233,7 @@ export default function StoreInputForm({
               onPickSaved={(loc) =>
                 patchStop(row.id, {
                   savedLocationId: loc.id,
-                  name: loc.name,
+                  name: loc.label,
                   address: loc.address,
                   useSpecificAddress: true
                 })
@@ -285,9 +280,9 @@ export default function StoreInputForm({
                 {onSaveLocationToProfile && row.name.trim() && row.address.trim() ? (
                   <div className="stop-save-profile-row">
                     {row.savedLocationId ? (
-                      <p className="muted-small stop-save-profile-hint">This stop uses a place from your saved locations.</p>
-                    ) : savedLocationList.some((s) => sameSavedPlace(s.name, s.address, row.name, row.address)) ? (
-                      <p className="muted-small stop-save-profile-hint">Already in your saved locations.</p>
+                      <p className="muted-small stop-save-profile-hint">This stop uses a place from your profile list.</p>
+                    ) : savedPlaceList.some((s) => sameSavedPlace(s.label, s.address, row.name, row.address)) ? (
+                      <p className="muted-small stop-save-profile-hint">Already in your saved places.</p>
                     ) : (
                       <>
                         <button

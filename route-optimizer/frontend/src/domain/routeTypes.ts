@@ -44,4 +44,8 @@ export interface OptimizeResponse {
   destination_address?: string | null;
   destination_lat?: number | null;
   destination_lng?: number | null;
+  /** Persisted on saved trips for history UI (driving until set by client or API). */
+  transport_mode?: "driving" | "walking" | "transit";
+  /** When using transit, optional hint for bus vs train thumbnail. */
+  transit_thumb?: "bus" | "train";
 }

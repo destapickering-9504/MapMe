@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import DocumentTheme from "../components/DocumentTheme";
-import { persistTheme, readStoredTheme } from "../components/AppHeader";
+import { persistTheme, readStoredTheme } from "../theme/themeStorage";
 
 const origLocalStorage = Object.getOwnPropertyDescriptor(window, "localStorage");
 

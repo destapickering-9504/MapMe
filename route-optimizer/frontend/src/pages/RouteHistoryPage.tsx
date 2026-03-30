@@ -1,128 +1,179 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { PlannerRefSidebar } from "../components/PlannerRefSidebar";
 import {
   deleteSavedTrip,
-  listSavedTrips,
+  listSavedTripsPage,
   setSavedTripFavorite,
   updateSavedTrip,
   type SavedTripRow
 } from "../api/savedTripsClient";
 import { useAuth } from "../auth/AuthContext";
 import type { OptimizeResponse } from "../domain/routeTypes";
-import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+import { PROFILE_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 import { RESTORE_TRIP_STATE_KEY } from "./RouteOptimizerPage";
+import { DeleteRouteConfirmModal } from "./history/DeleteRouteConfirmModal";
+import { HistoryHeader } from "./history/HistoryHeader";
+import { rowToViewModel } from "./history/historyMappers";
+import "./history/history.tailwind.css";
+import "./history/historyRef.css";
+import { mockListSavedTripsPage } from "./history/mockData";
+import { RouteCard, RouteCardSkeleton } from "./history/RouteCard";
+import { SearchAndFilterBar } from "./history/SearchAndFilterBar";
+import { historyRoutesSectionMeta } from "./history/historySectionTitle";
+import { SectionHeader } from "./history/SectionHeader";
+import type { HistoryRouteViewModel, RouteTransportMode } from "./history/types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 
-function formatWhen(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function summarizePayload(p: OptimizeResponse): string {
-  const n = p.stops_resolved?.length ?? 0;
-  const mins = p.best_route?.total_minutes?.toFixed(1) ?? "—";
-  return `${n} stop${n === 1 ? "" : "s"} · ~${mins} min`;
-}
-
-function rowMatchesName(row: SavedTripRow, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  const title = (row.title ?? "").toLowerCase();
-  const origin = (row.payload?.origin_query ?? "").toLowerCase();
-  return title.includes(q) || origin.includes(q);
-}
-
-function rowMatchesDateTime(row: SavedTripRow, query: string): boolean {
-  if (!query) return true;
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  const formatted = formatWhen(row.created_at).toLowerCase();
-  const iso = row.created_at.toLowerCase();
-  let shortDate = "";
-  try {
-    shortDate = new Date(row.created_at).toLocaleDateString(undefined).toLowerCase();
-  } catch {
-    /* ignore */
-  }
-  return formatted.includes(q) || iso.includes(q) || shortDate.includes(q);
-}
+/** Set true to preview the card UI with bundled mock rows (no API). */
+const USE_HISTORY_MOCK = false;
 
 export default function RouteHistoryPage() {
   const navigate = useNavigate();
   const { user, configured } = useAuth();
   const [rows, setRows] = useState<SavedTripRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [nameFilter, setNameFilter] = useState("");
-  const [dateTimeFilter, setDateTimeFilter] = useState("");
-  const [page, setPage] = useState(1);
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
+  const [filterSavedOnly, setFilterSavedOnly] = useState(false);
+  const [routeTypeFilter, setRouteTypeFilter] = useState<RouteTransportMode | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(nameFilter), 350);
+    return () => window.clearTimeout(t);
+  }, [nameFilter]);
+
+  const listQuery = useMemo(
+    () => ({
+      search: debouncedSearch.trim() || undefined,
+      savedOnly: filterSavedOnly,
+      transportMode: routeTypeFilter,
+      newestFirst: sortNewestFirst
+    }),
+    [debouncedSearch, filterSavedOnly, routeTypeFilter, sortNewestFirst]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (USE_HISTORY_MOCK) {
+      setLoading(true);
+      const res = mockListSavedTripsPage({
+        limit: PAGE_SIZE,
+        offset: 0,
+        ...listQuery
+      });
+      if (!cancelled) {
+        setRows(res.rows);
+        setTotalCount(res.totalCount);
+        setLoading(false);
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
     if (!user || !configured) {
       setRows([]);
+      setTotalCount(0);
       return;
     }
     setLoading(true);
     setError(null);
+    void (async () => {
+      try {
+        const res = await listSavedTripsPage({
+          limit: PAGE_SIZE,
+          offset: 0,
+          ...listQuery
+        });
+        if (!cancelled) {
+          setRows(res.rows);
+          setTotalCount(res.totalCount);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Could not load history");
+          setRows([]);
+          setTotalCount(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, configured, listQuery, USE_HISTORY_MOCK]);
+
+  const reloadFirstPage = useCallback(async () => {
+    if (USE_HISTORY_MOCK) {
+      const res = mockListSavedTripsPage({ limit: PAGE_SIZE, offset: 0, ...listQuery });
+      setRows(res.rows);
+      setTotalCount(res.totalCount);
+      return;
+    }
+    if (!user || !configured) return;
+    setError(null);
     try {
-      const list = await listSavedTrips();
-      setRows(list);
+      const res = await listSavedTripsPage({ limit: PAGE_SIZE, offset: 0, ...listQuery });
+      setRows(res.rows);
+      setTotalCount(res.totalCount);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load history");
-      setRows([]);
-    } finally {
-      setLoading(false);
     }
-  }, [user, configured]);
+  }, [user, configured, listQuery, USE_HISTORY_MOCK]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const loadMore = useCallback(async () => {
+    if (rows.length >= totalCount || loadingMore) return;
+    if (USE_HISTORY_MOCK) {
+      setLoadingMore(true);
+      const res = mockListSavedTripsPage({
+        limit: PAGE_SIZE,
+        offset: rows.length,
+        ...listQuery
+      });
+      setRows((prev) => [...prev, ...res.rows]);
+      setTotalCount(res.totalCount);
+      setLoadingMore(false);
+      return;
+    }
+    if (!user || !configured) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const res = await listSavedTripsPage({
+        limit: PAGE_SIZE,
+        offset: rows.length,
+        ...listQuery
+      });
+      setRows((prev) => [...prev, ...res.rows]);
+      setTotalCount(res.totalCount);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load more");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [rows.length, totalCount, loadingMore, user, configured, listQuery, USE_HISTORY_MOCK]);
 
-  const filteredRows = useMemo(() => {
-    return rows.filter(
-      (row) => rowMatchesName(row, nameFilter) && rowMatchesDateTime(row, dateTimeFilter)
-    );
-  }, [rows, nameFilter, dateTimeFilter]);
+  const viewModels = useMemo(() => rows.map(rowToViewModel), [rows]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const pageRows = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return filteredRows.slice(start, start + PAGE_SIZE);
-  }, [filteredRows, safePage]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [nameFilter, dateTimeFilter]);
-
-  const openInPlanner = (row: SavedTripRow) => {
+  const openInPlanner = (payload: OptimizeResponse) => {
     navigate(ROUTE_OPTIMIZER_PATH, {
-      state: { [RESTORE_TRIP_STATE_KEY]: row.payload }
+      state: { [RESTORE_TRIP_STATE_KEY]: payload }
     });
   };
 
-  const startRename = (row: SavedTripRow) => {
-    setEditingId(row.id);
-    setEditTitle(row.title ?? "");
+  const startRename = (id: string, title: string) => {
+    setEditingId(id);
+    setEditTitle(title);
   };
 
   const cancelRename = () => {
@@ -135,124 +186,55 @@ export default function RouteHistoryPage() {
     try {
       await updateSavedTrip(id, editTitle);
       cancelRename();
-      await refresh();
+      await reloadFirstPage();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Rename failed");
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const confirmDeleteRoute = async () => {
+    if (!deleteConfirm) return;
+    setDeleteBusy(true);
     setError(null);
     try {
-      await deleteSavedTrip(id);
-      await refresh();
+      await deleteSavedTrip(deleteConfirm.id);
+      setDeleteConfirm(null);
+      await reloadFirstPage();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
-  const toggleFavorite = async (row: SavedTripRow) => {
+  const toggleFavorite = async (id: string, next: boolean) => {
     setError(null);
     try {
-      await setSavedTripFavorite(row.id, !row.is_favorite);
-      await refresh();
+      await setSavedTripFavorite(id, next);
+      await reloadFirstPage();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update favorite");
     }
   };
 
-  const showTableShell = configured && user;
+  const renderCard = (route: HistoryRouteViewModel) => (
+    <li key={route.id}>
+      <RouteCard
+        route={route}
+        editing={editingId === route.id}
+        editTitle={editTitle}
+        onEditTitleChange={setEditTitle}
+        onStartRename={() => startRename(route.id, route.title)}
+        onSaveRename={() => void saveRename(route.id)}
+        onCancelRename={cancelRename}
+        onOpen={() => openInPlanner(route.payload)}
+        onToggleSave={() => void toggleFavorite(route.id, !route.isFavorite)}
+        onDelete={() => setDeleteConfirm({ id: route.id, title: route.title })}
+      />
+    </li>
+  );
 
-  const renderTableBody = () => {
-    if (loading) {
-      return (
-        <tr>
-          <td colSpan={6} className="route-history-table-empty">
-            Loading…
-          </td>
-        </tr>
-      );
-    }
-    if (rows.length === 0) {
-      return (
-        <tr>
-          <td colSpan={6} className="route-history-table-empty">
-            No routes yet.{" "}
-            <Link to={ROUTE_OPTIMIZER_PATH}>Plan a route</Link> — it will appear here after you optimize.
-          </td>
-        </tr>
-      );
-    }
-    if (filteredRows.length === 0) {
-      return (
-        <tr>
-          <td colSpan={6} className="route-history-table-empty">
-            No routes match your search. Try different name or date/time filters.
-          </td>
-        </tr>
-      );
-    }
-    return pageRows.map((row) => (
-      <tr key={row.id}>
-        <td className="route-history-table-favorite">
-          <button
-            type="button"
-            className={
-              row.is_favorite ? "route-history-star route-history-star-on" : "route-history-star"
-            }
-            aria-pressed={row.is_favorite}
-            aria-label={row.is_favorite ? "Remove from favorites" : "Add to favorites"}
-            title={row.is_favorite ? "Remove from favorites" : "Add to favorites"}
-            onClick={() => void toggleFavorite(row)}
-          >
-            {row.is_favorite ? "★" : "☆"}
-          </button>
-        </td>
-        <td className="route-history-table-name">
-          {editingId === row.id ? (
-            <div className="route-history-table-rename">
-              <input
-                type="text"
-                className="auth-flow-input route-history-table-input"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                aria-label="Route name"
-                placeholder="Route name"
-              />
-              <div className="route-history-rename-actions">
-                <button type="button" className="saved-trips-linkish" onClick={() => void saveRename(row.id)}>
-                  Save
-                </button>
-                <button type="button" className="saved-trips-linkish" onClick={cancelRename}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="route-history-table-name-cell">
-              <span className="route-history-table-title">{row.title ?? "Untitled route"}</span>
-              <button type="button" className="saved-trips-linkish" onClick={() => startRename(row)}>
-                Rename
-              </button>
-            </div>
-          )}
-        </td>
-        <td className="route-history-table-date">{formatWhen(row.created_at)}</td>
-        <td className="route-history-table-summary">{summarizePayload(row.payload)}</td>
-        <td className="route-history-table-start">{row.payload.origin_query}</td>
-        <td className="route-history-table-actions">
-          <button type="button" className="saved-trips-linkish" onClick={() => openInPlanner(row)}>
-            Open
-          </button>
-          <button type="button" className="saved-trips-linkish danger" onClick={() => void handleDelete(row.id)}>
-            Delete
-          </button>
-        </td>
-      </tr>
-    ));
-  };
-
-  if (!configured) {
+  if (!configured && !USE_HISTORY_MOCK) {
     return (
       <main className="app-page app-page-narrow">
         <h1 className="app-page-title">History</h1>
@@ -263,7 +245,7 @@ export default function RouteHistoryPage() {
     );
   }
 
-  if (!user) {
+  if (!user && !USE_HISTORY_MOCK) {
     return (
       <main className="app-page app-page-narrow">
         <h1 className="app-page-title">History</h1>
@@ -274,90 +256,123 @@ export default function RouteHistoryPage() {
     );
   }
 
+  const showShell = USE_HISTORY_MOCK || (configured && Boolean(user));
+  const hasActiveFilters = Boolean(
+    debouncedSearch.trim() || filterSavedOnly || routeTypeFilter
+  );
+  const listEmpty = !loading && totalCount === 0 && !hasActiveFilters;
+  const noResults = !loading && totalCount === 0 && hasActiveFilters;
+  const sectionMeta = historyRoutesSectionMeta(filterSavedOnly, routeTypeFilter);
+
   return (
-    <main className="app-page">
-      <div className="app-page-header">
-        <h1 className="app-page-title">History</h1>
-      </div>
-
-      {error ? (
-        <p className="status-text error-text" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {showTableShell ? (
-        <>
-          <div className="route-history-filters planner-card">
-            <label className="route-history-filter">
-              <span className="auth-flow-label-text">Search route / planner name or start</span>
-              <input
-                type="search"
-                className="auth-flow-input"
-                value={nameFilter}
-                onChange={(e) => setNameFilter(e.target.value)}
-                placeholder="e.g. Sunday shopping, 94102"
-                aria-label="Search by route name or start location"
-              />
-            </label>
-            <label className="route-history-filter">
-              <span className="auth-flow-label-text">Search date / time</span>
-              <input
-                type="search"
-                className="auth-flow-input"
-                value={dateTimeFilter}
-                onChange={(e) => setDateTimeFilter(e.target.value)}
-                placeholder="e.g. Mar 2026, 3:45 PM, 2026-03-26"
-                aria-label="Filter by created date or time text"
-              />
-            </label>
-          </div>
-
-          <div className="route-history-table-wrap">
-            <table className="route-history-table">
-              <caption className="sr-only">Saved routes</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Favorite</th>
-                  <th scope="col">Route name</th>
-                  <th scope="col">Created</th>
-                  <th scope="col">Summary</th>
-                  <th scope="col">Start</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>{renderTableBody()}</tbody>
-            </table>
-          </div>
-
-          {!loading && rows.length > 0 && filteredRows.length > 0 ? (
-            <div className="route-history-pagination" role="navigation" aria-label="History pages">
-              <span className="route-history-page-info">
-                Page {safePage} of {totalPages} ({filteredRows.length} route{filteredRows.length === 1 ? "" : "s"}
-                {filteredRows.length !== rows.length ? ` of ${rows.length} total` : ""})
-              </span>
-              <div className="route-history-page-buttons">
-                <button
-                  type="button"
-                  className="auth-flow-secondary route-history-page-btn"
-                  disabled={safePage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="auth-flow-secondary route-history-page-btn"
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                </button>
-              </div>
+    <main className="history-ref-layout-shell app-page-history-ref">
+      <div className="hm-history-root hm-ref hm-ref-page-with-sidebar">
+        <PlannerRefSidebar surface="history" />
+        <div className="hm-ref-sidebar-main">
+          <div className="hm-ref-sidebar-main-inner app-page-history-shell">
+            <div className="hm-ref-mobile-tabs" aria-label="Navigate">
+              <Link to={ROUTE_OPTIMIZER_PATH}>Planner</Link>
+              <Link to={ROUTE_HISTORY_PATH}>History</Link>
+              <Link to={PROFILE_PATH}>Profile</Link>
             </div>
-          ) : null}
-        </>
-      ) : null}
+
+            <HistoryHeader />
+
+            {error ? (
+              <p className="status-text error-text mb-6" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            {showShell ? (
+              <>
+            <SearchAndFilterBar
+              searchQuery={nameFilter}
+              onSearchChange={setNameFilter}
+              filterSavedOnly={filterSavedOnly}
+              onToggleSavedOnly={() => setFilterSavedOnly((v) => !v)}
+              routeTypeFilter={routeTypeFilter}
+              onRouteTypeChange={setRouteTypeFilter}
+              sortNewestFirst={sortNewestFirst}
+              onSortNewestFirst={setSortNewestFirst}
+            />
+
+            {loading ? (
+              <ul className="hm-ref-card-list" aria-busy="true" aria-label="Loading routes">
+                <li>
+                  <RouteCardSkeleton />
+                </li>
+                <li>
+                  <RouteCardSkeleton />
+                </li>
+                <li>
+                  <RouteCardSkeleton />
+                </li>
+              </ul>
+            ) : null}
+
+            {listEmpty ? (
+              <div className="hm-ref-empty">
+                <p className="hm-ref-empty-title">No routes yet</p>
+                <p className="hm-ref-empty-text">
+                  <Link to={ROUTE_OPTIMIZER_PATH}>Plan a route</Link> — it will show up here after you optimize.
+                </p>
+              </div>
+            ) : null}
+
+            {noResults ? (
+              <div className="hm-ref-empty">
+                <p className="hm-ref-empty-title">
+                  {filterSavedOnly ? "No saved routes" : "No routes match"}
+                </p>
+                <p className="hm-ref-empty-text">
+                  {filterSavedOnly
+                    ? "Turn off Saved or clear other filters to see matching routes."
+                    : "Try clearing filters or searching with a different name or place."}
+                </p>
+              </div>
+            ) : null}
+
+            {!loading && viewModels.length > 0 ? (
+              <section aria-labelledby={sectionMeta.id}>
+                <SectionHeader id={sectionMeta.id} title={sectionMeta.title} count={totalCount} />
+                <ul className="hm-ref-card-list">
+                  {viewModels.map((r) => renderCard(r))}
+                </ul>
+                {totalCount > PAGE_SIZE || rows.length < totalCount ? (
+                  <div className="hm-ref-load-wrap">
+                    <p className="hm-ref-muted-caption">
+                      Showing {rows.length} of {totalCount}
+                    </p>
+                    {rows.length < totalCount ? (
+                      <button
+                        type="button"
+                        className="hm-ref-btn-load"
+                        disabled={loadingMore}
+                        onClick={() => void loadMore()}
+                      >
+                        {loadingMore ? "Loading…" : "Load more"}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <DeleteRouteConfirmModal
+          open={deleteConfirm !== null}
+          routeTitle={deleteConfirm?.title ?? ""}
+          busy={deleteBusy}
+          onCancel={() => {
+            if (!deleteBusy) setDeleteConfirm(null);
+          }}
+          onConfirm={() => void confirmDeleteRoute()}
+        />
+      </div>
     </main>
   );
 }

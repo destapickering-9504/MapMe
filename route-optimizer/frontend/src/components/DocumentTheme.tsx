@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "react";
-import { readStoredTheme } from "./AppHeader";
+import { readStoredTheme } from "../theme/themeStorage";
 
 /** Applies stored light/dark preference when routes without App (e.g. auth) mount. */
 export default function DocumentTheme() {
