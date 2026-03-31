@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const {
   rpcMock,
   insertMock,
+  insertSingleMock,
   eqMock,
   deleteMock,
   updateMock,
@@ -12,6 +13,7 @@ const {
 } = vi.hoisted(() => ({
   rpcMock: vi.fn(),
   insertMock: vi.fn(),
+  insertSingleMock: vi.fn(),
   eqMock: vi.fn(),
   deleteMock: vi.fn(),
   updateMock: vi.fn(),
@@ -42,7 +44,12 @@ describe("savedTripsClient", () => {
       return {};
     });
     rpcMock.mockResolvedValue({ data: { total_count: 0, rows: [] }, error: null });
-    insertMock.mockResolvedValue({ error: null });
+    insertSingleMock.mockResolvedValue({ data: { id: "inserted-row-id" }, error: null });
+    insertMock.mockImplementation(() => ({
+      select: () => ({
+        single: insertSingleMock
+      })
+    }));
     eqMock.mockResolvedValue({ error: null });
     updateEqMock.mockResolvedValue({ error: null });
     getUserMock.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
@@ -203,13 +210,43 @@ describe("savedTripsClient", () => {
       travel_time_note: "",
       best_route_geojson: null
     };
-    await insertSavedTrip(payload, "My title");
-    expect(insertMock).toHaveBeenCalledWith({
+    const id = await insertSavedTrip(payload, "My title");
+    expect(id).toBe("inserted-row-id");
+    expect(insertMock).toHaveBeenCalled();
+    expect(insertSingleMock).toHaveBeenCalled();
+    expect(insertMock.mock.calls[0]?.[0]).toEqual({
       user_id: "user-1",
       title: "My title",
       payload,
       is_favorite: false
     });
+  });
+
+  test("insertSavedTrip can create a favorited row", async () => {
+    const { insertSavedTrip } = await import("../api/savedTripsClient");
+    const payload = {
+      trip_mode: "round_trip" as const,
+      origin_query: "94102",
+      origin_address: "x",
+      origin_lat: 1,
+      origin_lng: 2,
+      stops_resolved: [],
+      permutations_considered: 1,
+      best_route: {
+        ordered_stores: ["A"],
+        ordered_stops: [{ query: "A", address: "a", lat: 1, lng: 2 }],
+        total_minutes: 10
+      },
+      alternatives: [],
+      explanation: "",
+      travel_time_note: "",
+      best_route_geojson: null
+    };
+    const id = await insertSavedTrip(payload, "Starred", { isFavorite: true });
+    expect(id).toBe("inserted-row-id");
+    expect(insertMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({ is_favorite: true, title: "Starred" })
+    );
   });
 
   test("insertSavedTrip default title uses origin when title omitted", async () => {
@@ -233,9 +270,7 @@ describe("savedTripsClient", () => {
       best_route_geojson: null
     };
     await insertSavedTrip(payload);
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Trip · Oakland" })
-    );
+    expect(insertMock.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ title: "Trip · Oakland" }));
   });
 
   test("deleteSavedTrip calls delete with id", async () => {
@@ -246,7 +281,7 @@ describe("savedTripsClient", () => {
   });
 
   test("insertSavedTrip throws on insert error", async () => {
-    insertMock.mockResolvedValueOnce({ error: { message: "db down" } });
+    insertSingleMock.mockResolvedValueOnce({ data: null, error: { message: "db down" } });
     const { insertSavedTrip } = await import("../api/savedTripsClient");
     const payload = {
       trip_mode: "round_trip" as const,

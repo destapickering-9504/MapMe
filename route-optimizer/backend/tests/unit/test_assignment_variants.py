@@ -19,3 +19,19 @@ def test_expand_single_stop():
     primary = [p]
     out = expand_chain_assignment_variants([[p]], primary, max_rank_per_stop=2)
     assert len(out) == 1
+
+
+def test_expand_pairwise_second_rank_when_both_stops_have_alts():
+    a1 = ResolvedLocation(lat=1.0, lng=1.0, display_address="A1")
+    a2 = ResolvedLocation(lat=1.02, lng=1.02, display_address="A2")
+    b1 = ResolvedLocation(lat=3.0, lng=3.0, display_address="B1")
+    b2 = ResolvedLocation(lat=3.02, lng=3.02, display_address="B2")
+    primary = [a1, b1]
+    candidate_lists = [[a1, a2], [b1, b2]]
+    out = expand_chain_assignment_variants(candidate_lists, primary, max_rank_per_stop=3)
+    keys = {tuple((round(l.lat, 5), round(l.lng, 5)) for l in row) for row in out}
+    assert len(out) == len(keys)
+    assert any(
+        any(l.display_address == "A2" for l in row) and any(l.display_address == "B2" for l in row)
+        for row in out
+    )

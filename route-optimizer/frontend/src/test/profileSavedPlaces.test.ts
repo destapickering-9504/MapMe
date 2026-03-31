@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
+  originConsumesSavedPlace,
   parseProfileSavedPlaces,
   profilePlaceToOriginQuery,
-  profileSavedPlacesUserDataUpdate
+  profileSavedPlacesUserDataUpdate,
+  savedOriginLabelForPlaceField
 } from "../domain/profileSavedPlaces";
 
 describe("profileSavedPlaces", () => {
@@ -39,6 +41,19 @@ describe("profileSavedPlaces", () => {
         query: "legacy"
       })
     ).toBe("Oakland, CA");
+  });
+
+  test("savedOriginLabelForPlaceField maps address-only start field to saved label", () => {
+    const places = [{ id: "x", label: "Gym", address: "500 Pine St, Seattle", query: "500 Pine St, Seattle" }];
+    expect(savedOriginLabelForPlaceField("500 Pine St, Seattle", places)).toBe("Gym");
+    expect(savedOriginLabelForPlaceField("Other", places)).toBeUndefined();
+  });
+
+  test("originConsumesSavedPlace matches canonical origin and address", () => {
+    const p = { id: "x", label: "Home", address: "Oakland, CA", query: "legacy" };
+    expect(originConsumesSavedPlace("Oakland, CA", p)).toBe(true);
+    expect(originConsumesSavedPlace("legacy", p)).toBe(true);
+    expect(originConsumesSavedPlace("Denver, CO", p)).toBe(false);
   });
 
   test("profileSavedPlacesUserDataUpdate clears legacy keys", () => {

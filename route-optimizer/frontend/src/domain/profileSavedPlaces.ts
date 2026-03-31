@@ -116,3 +116,39 @@ export function profilePlaceToOriginQuery(p: ProfileSavedPlace): string {
   if (a) return computeStartLocationQuery(p.label, a);
   return p.query.trim();
 }
+
+/**
+ * When the start field equals a saved place's geocode query or address, return that place's label (Home, Gym, …).
+ * `origin_place` sent to the API is address-only; this supplies display text for the summary and map.
+ */
+export function savedOriginLabelForPlaceField(
+  originPlace: string,
+  savedPlaces: ProfileSavedPlace[]
+): string | undefined {
+  const o = originPlace.trim();
+  if (!o) return undefined;
+  for (const s of savedPlaces) {
+    if (profilePlaceToOriginQuery(s) === o) {
+      const lab = s.label.trim();
+      return lab || undefined;
+    }
+    const addr = s.address.trim();
+    if (addr && addr === o) {
+      const lab = s.label.trim();
+      return lab || undefined;
+    }
+  }
+  return undefined;
+}
+
+/** True when the start field matches this saved place (picked from the list or typed to the same string). */
+export function originConsumesSavedPlace(origin: string, p: ProfileSavedPlace): boolean {
+  const o = origin.trim();
+  if (!o) return false;
+  if (profilePlaceToOriginQuery(p) === o) return true;
+  const a = p.address.trim();
+  if (a && a === o) return true;
+  const q = p.query.trim();
+  if (q && q === o) return true;
+  return false;
+}

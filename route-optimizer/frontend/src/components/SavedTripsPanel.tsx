@@ -7,7 +7,9 @@ import { ROUTE_HISTORY_PATH } from "../routes/paths";
 
 interface Props {
   currentResult: OptimizeResponse | null;
-  onLoadTrip: (payload: OptimizeResponse) => void;
+  onLoadTrip: (row: SavedTripRow) => void;
+  /** Increment to refetch favorites list (e.g. after starring from the map summary). */
+  listRefreshToken?: number;
 }
 
 function formatWhen(iso: string): string {
@@ -23,7 +25,22 @@ function formatWhen(iso: string): string {
   }
 }
 
-export default function SavedTripsPanel({ currentResult: _currentResult, onLoadTrip }: Props) {
+/** Legacy rows stored `"{query} · {same as formatWhen(created_at)}"` — show the query once and keep date on the meta line only. */
+function favoriteRouteTitle(row: SavedTripRow): string {
+  const raw = (row.title ?? "").trim() || "Route";
+  const suffix = ` · ${formatWhen(row.created_at)}`;
+  if (raw.endsWith(suffix)) {
+    const stripped = raw.slice(0, -suffix.length).trim();
+    return stripped || "Route";
+  }
+  return raw;
+}
+
+export default function SavedTripsPanel({
+  currentResult: _currentResult,
+  onLoadTrip,
+  listRefreshToken = 0
+}: Props) {
   const { user, configured } = useAuth();
   const [rows, setRows] = useState<SavedTripRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,12 +71,12 @@ export default function SavedTripsPanel({ currentResult: _currentResult, onLoadT
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, listRefreshToken]);
 
   const favorites = useMemo(() => rows.filter((r) => r.is_favorite), [rows]);
 
   const handleLoad = (row: SavedTripRow) => {
-    onLoadTrip(row.payload);
+    onLoadTrip(row);
   };
 
   const handleUnstar = async (id: string) => {
@@ -108,14 +125,14 @@ export default function SavedTripsPanel({ currentResult: _currentResult, onLoadT
       {!loading && favorites.length > 0 ? (
         <>
           <p className="muted-small">
-            Star or unstar trips in <Link to={ROUTE_HISTORY_PATH}>History</Link>.
+            Star from the route summary on the map or in <Link to={ROUTE_HISTORY_PATH}>History</Link>.
           </p>
           <ul className="saved-trips-list">
             {favorites.map((row) => (
               <li key={row.id} className="saved-trips-row">
                 <div className="saved-trips-row-main">
                   <span className="saved-trips-title" title="Favorite">
-                    ★ {row.title ?? "Route"}
+                    ★ {favoriteRouteTitle(row)}
                   </span>
                   <span className="saved-trips-meta">{formatWhen(row.created_at)}</span>
                 </div>

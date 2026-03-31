@@ -1,4 +1,15 @@
-import "./privacy-page.css";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from "react";
+import { createPortal } from "react-dom";
+import "../pages/help-page.css";
+import "../pages/privacy-page.css";
 
 function IconLock({ className }: { className?: string }) {
   return (
@@ -47,12 +58,57 @@ function IconMail({ className }: { className?: string }) {
 const SUPPORT_MAIL = "support@mapme.app";
 const SUPPORT_HREF = `mailto:${SUPPORT_MAIL}?subject=MapMe%20privacy`;
 
-export default function PrivacyPage() {
-  return (
-    <main className="privacy-page app-page">
-      <div className="privacy-page__inner">
-        <div className="privacy-page__card">
-          <h1 className="privacy-page__title">Privacy</h1>
+type PrivacyModalContextValue = {
+  openPrivacy: () => void;
+};
+
+const PrivacyModalContext = createContext<PrivacyModalContextValue | null>(null);
+
+export function usePrivacyModal(): PrivacyModalContextValue {
+  const ctx = useContext(PrivacyModalContext);
+  if (!ctx) {
+    throw new Error("usePrivacyModal must be used within PrivacyModalProvider");
+  }
+  return ctx;
+}
+
+export function PrivacyModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div className="help-modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="help-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="privacy-page__card help-modal__card">
+          <button type="button" className="help-modal__close" onClick={onClose} aria-label="Close privacy">
+            <span aria-hidden>×</span>
+          </button>
+          <h1 id="privacy-modal-title" className="privacy-page__title">
+            Privacy
+          </h1>
           <p className="privacy-page__lede">We respect your privacy and keep things simple.</p>
 
           <hr className="privacy-page__rule" />
@@ -133,13 +189,26 @@ export default function PrivacyPage() {
                 Contact
               </h2>
               <p className="privacy-page__contact">
-                Questions?{" "}
-                <a href={SUPPORT_HREF}>{SUPPORT_MAIL}</a>
+                Questions? <a href={SUPPORT_HREF}>{SUPPORT_MAIL}</a>
               </p>
             </div>
           </section>
         </div>
       </div>
-    </main>
+    </div>,
+    document.body
+  );
+}
+
+export default function PrivacyModalProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const openPrivacy = useCallback(() => setOpen(true), []);
+  const value = useMemo(() => ({ openPrivacy }), [openPrivacy]);
+
+  return (
+    <PrivacyModalContext.Provider value={value}>
+      {children}
+      <PrivacyModal open={open} onClose={() => setOpen(false)} />
+    </PrivacyModalContext.Provider>
   );
 }

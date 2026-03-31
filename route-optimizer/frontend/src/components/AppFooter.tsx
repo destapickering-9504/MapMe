@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
-import { FEEDBACK_PATH, HELP_PATH, PRIVACY_PATH } from "../routes/paths";
+import { FEEDBACK_PATH } from "../routes/paths";
+import { useHelpModal } from "./HelpModal";
+import { usePrivacyModal } from "./PrivacyModal";
 
 export default function AppFooter() {
   const year = new Date().getFullYear();
+  const { openHelp } = useHelpModal();
+  const { openPrivacy } = usePrivacyModal();
 
   return (
     <footer className="app-global-footer" role="contentinfo">
@@ -21,15 +25,19 @@ export default function AppFooter() {
         <span className="app-global-footer__sep" aria-hidden>
           •
         </span>
-        <Link to={HELP_PATH} className="app-global-footer__link">
+        <button type="button" className="app-global-footer__link app-global-footer__link--button" onClick={openHelp}>
           Help
-        </Link>
+        </button>
         <span className="app-global-footer__sep" aria-hidden>
           •
         </span>
-        <Link to={PRIVACY_PATH} className="app-global-footer__link">
+        <button
+          type="button"
+          className="app-global-footer__link app-global-footer__link--button"
+          onClick={openPrivacy}
+        >
           Privacy
-        </Link>
+        </button>
       </nav>
     </footer>
   );

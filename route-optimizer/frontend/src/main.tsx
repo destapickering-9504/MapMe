@@ -8,16 +8,12 @@ import AppRouteShell from "./components/AppRouteShell";
 import DocumentTheme from "./components/DocumentTheme";
 import AuthFlowPage from "./pages/AuthFlowPage";
 import FeedbackPage from "./pages/FeedbackPage";
-import HelpPage from "./pages/HelpPage";
-import PrivacyPage from "./pages/PrivacyPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RouteHistoryPage from "./pages/RouteHistoryPage";
 import RouteOptimizerPage from "./pages/RouteOptimizerPage";
 import {
   FEEDBACK_PATH,
-  HELP_PATH,
-  PRIVACY_PATH,
   PROFILE_PATH,
   RESET_PASSWORD_PATH,
   ROUTE_HISTORY_PATH,
@@ -38,8 +34,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route element={<AppLayout />}>
               <Route path={ROUTE_OPTIMIZER_PATH} element={<RouteOptimizerPage />} />
               <Route path={FEEDBACK_PATH} element={<FeedbackPage />} />
-              <Route path={HELP_PATH} element={<HelpPage />} />
-              <Route path={PRIVACY_PATH} element={<PrivacyPage />} />
               <Route element={<RequireAuth />}>
                 <Route path={PROFILE_PATH} element={<ProfilePage />} />
                 <Route path={ROUTE_HISTORY_PATH} element={<RouteHistoryPage />} />

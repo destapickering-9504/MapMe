@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import AppLayout from "../AppLayout";
-import { HELP_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+import { FEEDBACK_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 
@@ -125,7 +125,7 @@ describe("AppLayout", () => {
     expect(document.documentElement.style.getPropertyValue("--app-footer-sidebar-inset")).toBe("220px");
   });
 
-  test("sets footer sidebar inset on help when signed in", () => {
+  test("sets footer sidebar inset on feedback when signed in", () => {
     useAuthMock.mockReturnValue({
       user: user({ email: "a@b.co", user_metadata: {} }),
       session: null,
@@ -134,10 +134,10 @@ describe("AppLayout", () => {
       signOut: vi.fn()
     });
     render(
-      <MemoryRouter initialEntries={[HELP_PATH]}>
+      <MemoryRouter initialEntries={[FEEDBACK_PATH]}>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route path={HELP_PATH} element={<div>out</div>} />
+            <Route path={FEEDBACK_PATH} element={<div>out</div>} />
           </Route>
         </Routes>
       </MemoryRouter>

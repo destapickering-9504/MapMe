@@ -34,7 +34,7 @@ describe("AuthFlowPage", () => {
   test("sign up tab shows password fields and create account", () => {
     renderAuthFlow();
     fireEvent.click(screen.getByRole("tab", { name: /^sign up$/i }));
-    expect(screen.getByPlaceholderText(/at least/i)).toBeTruthy();
+    expect(screen.getByPlaceholderText(/8\+ characters/i)).toBeTruthy();
     expect(screen.getByPlaceholderText(/same as above/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: /create account/i })).toBeTruthy();
   });

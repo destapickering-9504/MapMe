@@ -36,6 +36,7 @@ describe("RouteBuilderPanel", () => {
     fireEvent.click(screen.getByText("Optimize Route"));
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit.mock.calls[0][0].origin_place).toBe("Oakland, CA 94102");
+    expect(onSubmit.mock.calls[0][0].origin_label).toBe("Home");
   });
 
   test("submits store names from stop rows", () => {
@@ -175,6 +176,42 @@ describe("RouteBuilderPanel", () => {
     expect(screen.getAllByLabelText(/Stop \d store or place name/)).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: /Add another stop/i }));
     expect(screen.getAllByLabelText(/Stop \d store or place name/)).toHaveLength(3);
+  });
+
+  test("saved place used as a stop is omitted from the start saved list", async () => {
+    const savedPlaces = [
+      { id: "h1", label: "Home", address: "Oakland, CA 94102", query: "Oakland, CA 94102" },
+      { id: "t1", label: "Target", address: "100 Main St", query: "100 Main St" }
+    ];
+    render(<RouteBuilderPanel onSubmit={vi.fn()} savedPlaces={savedPlaces} />);
+    const stop1Input = screen.getByLabelText("Stop 1 store or place name");
+    fireEvent.focus(stop1Input);
+    fireEvent.mouseDown(await screen.findByRole("option", { name: /Target.*100 Main/i }));
+
+    const originInput = screen.getByLabelText("origin-place-input");
+    fireEvent.focus(originInput);
+    await screen.findByRole("listbox");
+    const originOptions = screen.getAllByRole("option").map((el) => el.textContent ?? "");
+    expect(originOptions.some((t) => t.includes("Target") && t.includes("100 Main"))).toBe(false);
+    expect(originOptions.some((t) => t.includes("Home") && t.includes("Oakland"))).toBe(true);
+  });
+
+  test("saved place matching start field is omitted from other stops’ saved list", async () => {
+    const savedPlaces = [
+      { id: "h1", label: "Home", address: "Oakland, CA 94102", query: "Oakland, CA 94102" },
+      { id: "t1", label: "Target", address: "100 Main St", query: "100 Main St" }
+    ];
+    render(<RouteBuilderPanel onSubmit={vi.fn()} savedPlaces={savedPlaces} />);
+    const originInput = screen.getByLabelText("origin-place-input");
+    fireEvent.focus(originInput);
+    fireEvent.mouseDown(await screen.findByRole("option", { name: /Home.*Oakland/i }));
+
+    const stop2Input = screen.getByLabelText("Stop 2 store or place name");
+    fireEvent.focus(stop2Input);
+    await screen.findByRole("listbox");
+    const stop2Options = screen.getAllByRole("option").map((el) => el.textContent ?? "");
+    expect(stop2Options.some((t) => t.includes("Home") && t.includes("Oakland"))).toBe(false);
+    expect(stop2Options.some((t) => t.includes("Target"))).toBe(true);
   });
 
   test("same saved location cannot be selected on two stops", async () => {

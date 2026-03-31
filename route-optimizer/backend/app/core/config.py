@@ -14,7 +14,7 @@ class Settings(BaseModel):
     # Stops resolved within this radius (m) share one parking lot: store↔store matrix legs become 0 min.
     optimizer_same_lot_radius_m: float = float(os.getenv("OPTIMIZER_SAME_LOT_RADIUS_M", "500"))
     # Top N geocoder hits per stop to try as alternate store locations (chain options).
-    optimizer_chain_alt_ranks: int = int(os.getenv("OPTIMIZER_CHAIN_ALT_RANKS", "3"))
+    optimizer_chain_alt_ranks: int = int(os.getenv("OPTIMIZER_CHAIN_ALT_RANKS", "4"))
     # Optional congestion fudge: comma-separated south,west,north,east (decimal degrees).
     # Legs whose midpoint or an endpoint falls in the box get duration × multiplier (>1).
     optimizer_congestion_bbox: str = os.getenv("OPTIMIZER_CONGESTION_BBOX", "")

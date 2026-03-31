@@ -1,6 +1,7 @@
 from app.services.optimizer import (
     best_permutation_fixed_destination,
     best_permutation_round_trip,
+    best_route_one_way_end_last_list_stop,
     best_route_with_alternatives,
     best_route_with_fixed_destination,
     score_route_order,
@@ -63,6 +64,21 @@ def test_all_permutations_for_three_stores():
     ]
     results = best_route_with_alternatives(matrix, 3, False, top_n=6)
     assert len(results) == 6
+
+
+def test_one_way_end_last_list_stop_only_orders_ending_with_final_index():
+    # Unrestricted one-way is cheaper ending at the first listed store; fixed policy forces last list index last.
+    matrix = [
+        [0, 50, 1],
+        [50, 0, 50],
+        [1, 50, 0],
+    ]
+    free = best_route_with_alternatives(matrix, 2, False, top_n=1)[0]
+    assert free[0][-1] == 0
+
+    fixed = best_route_one_way_end_last_list_stop(matrix, 2, top_n=1)[0]
+    assert fixed[0] == [0, 1]
+    assert fixed[0][-1] == 1
 
 
 def test_zero_same_lot_only_store_to_store():

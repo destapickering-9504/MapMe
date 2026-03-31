@@ -8,9 +8,9 @@
   --ref-card-b: #0d1015;
   --ref-line: rgba(255, 255, 255, 0.09);
   --ref-title: #f8fafc;
-  --ref-path: #aeb4bf;
-  --ref-meta: #7b8394;
-  --ref-start: #656d7e;
+  --ref-path: #bcc4d4;
+  --ref-meta: #949eb3;
+  --ref-start: #7c8799;
   --ref-cta: #4a372f;
   --ref-cta-hover: #5d453b;
   --ref-cta-text: #faf7f2;
@@ -611,11 +611,13 @@
 
 .hm-ref-empty-text a {
   font-weight: 600;
-  color: var(--ref-cta-hover);
+  color: var(--ref-sage);
+  text-decoration: none;
 }
 
 .hm-ref-empty-text a:hover {
   text-decoration: underline;
+  filter: brightness(1.08);
 }
 
 .hm-ref-section-stack {
@@ -1270,11 +1272,6 @@
 
 .hm-history-root.hm-ref .profile-ref-hero-name {
   color: var(--ref-title);
-}
-
-.hm-history-root.hm-ref .profile-ref-hero-email,
-.hm-history-root.hm-ref .profile-ref-unverified-note {
-  color: var(--ref-meta);
 }
 
 .hm-history-root.hm-ref .profile-ref-mobile-tabs a {

@@ -239,13 +239,8 @@ export default function ProfilePage() {
     const meta = user.user_metadata;
     const fromProfile = typeof meta.full_name === "string" ? meta.full_name.trim() : "";
     if (fromProfile) return fromProfile;
-    const fromEmail = user.email?.split("@")[0];
-    return fromEmail && fromEmail.length > 0 ? fromEmail : "Your account";
+    return "Your account";
   }, [user]);
-
-  const emailVerified = Boolean(
-    user?.email && (user as { email_confirmed_at?: string }).email_confirmed_at
-  );
 
   const avatarInitials = useMemo(() => {
     const parts = displayName.trim().split(/\s+/).filter(Boolean);
@@ -659,36 +654,10 @@ export default function ProfilePage() {
               </button>
             </div>
             <div className="profile-ref-hero-body">
-              <div className="profile-ref-hero-text">
-                <div className="profile-ref-hero-identity-row">
-                  <div className="profile-ref-name-row">
-                    <h1 id="profile-hero-name" className="profile-ref-hero-name">
-                      {displayName}
-                    </h1>
-                    {emailVerified ? (
-                      <span
-                        className="profile-ref-verified"
-                        title="Your email is confirmed. We can use it for sign-in, password reset, and important account messages."
-                      >
-                        <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                          <path
-                            fillRule="evenodd"
-                            d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        Verified
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="profile-ref-hero-email">{user.email ?? "No email on file"}</p>
-                </div>
-                {user.email && !emailVerified ? (
-                  <p className="profile-ref-unverified-note">
-                    This email isn&apos;t confirmed yet. Open the link in the message Map Me sent you, or request a new one
-                    from the sign-in screen. Until then, you won&apos;t see the verified badge.
-                  </p>
-                ) : null}
+                <div className="profile-ref-hero-text">
+                <h1 id="profile-hero-name" className="profile-ref-hero-name">
+                  {displayName}
+                </h1>
               </div>
             </div>
           </section>
@@ -991,7 +960,9 @@ export default function ProfilePage() {
                     Change password
                   </button>
                 ) : (
-                  <p className="muted-small profile-account-password-hint">Add an email on your account to change password.</p>
+                  <p className="muted-small profile-account-password-hint">
+                    Password changes aren&apos;t available for this sign-in method.
+                  </p>
                 )}
               </div>
             </section>

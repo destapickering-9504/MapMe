@@ -44,4 +44,13 @@ def expand_chain_assignment_variants(
             alt = list(primary)
             alt[i] = cl[j]
             push(alt)
+    # Pairwise alternate branches (e.g. two different "Target"-style hits at once).
+    for i in range(n):
+        for j in range(i + 1, n):
+            ci, cj = candidate_lists[i], candidate_lists[j]
+            if len(ci) > 1 and len(cj) > 1:
+                alt = list(primary)
+                alt[i] = ci[1]
+                alt[j] = cj[1]
+                push(alt)
     return out

@@ -4,7 +4,7 @@ import type { OptimizeRequest, OptimizeResponse } from "../domain/routeTypes";
 
 export interface UseOptimizeRouteOptions {
   /** Called only after a successful API optimize (not when restoring from saved data). */
-  onOptimized?: (data: OptimizeResponse) => void;
+  onOptimized?: (data: OptimizeResponse) => void | Promise<void>;
 }
 
 export function useOptimizeRoute(options?: UseOptimizeRouteOptions) {

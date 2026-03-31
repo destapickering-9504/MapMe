@@ -18,6 +18,11 @@ class OptimizeRequest(BaseModel):
         max_length=300,
         description="Full street address, ZIP, city, or town for the starting point",
     )
+    origin_label: Optional[str] = Field(
+        default=None,
+        max_length=80,
+        description="Optional display-only label when start is a saved place (Home, Gym, …).",
+    )
     stores: list[str] = Field(min_length=1, max_length=10)
     trip_mode: str = Field(default="round_trip", pattern="^(round_trip|one_way)$")
     destination_place: Optional[str] = Field(
@@ -75,6 +80,7 @@ class RouteOption(BaseModel):
 class OptimizeResponse(BaseModel):
     trip_mode: str
     origin_query: str
+    origin_label: Optional[str] = None
     origin_address: str
     origin_lat: float
     origin_lng: float

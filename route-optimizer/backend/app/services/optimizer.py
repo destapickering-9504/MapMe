@@ -75,6 +75,31 @@ def best_route_with_alternatives(
     return scored[:top_n]
 
 
+def best_route_one_way_end_last_list_stop(
+    matrix: list[list[float]],
+    num_stores: int,
+    top_n: int = 3,
+) -> list[tuple[list[int], float]]:
+    """One-way without a separate destination: finish at the last stop in the submitted list.
+
+    Store indices follow ``payload.stores`` order; index ``num_stores - 1`` must be visited last.
+    Earlier stops may still be reordered for shortest time.
+    """
+    if num_stores < 1:
+        return []
+    idx = list(range(num_stores))
+    last = num_stores - 1
+    scored: list[tuple[list[int], float]] = []
+    for order in permutations(idx):
+        ol = list(order)
+        if ol[-1] != last:
+            continue
+        minutes = score_route_order(matrix, ol, round_trip=False)
+        scored.append((ol, minutes))
+    scored.sort(key=lambda item: item[1])
+    return scored[:top_n]
+
+
 def best_route_with_fixed_destination(
     matrix: list[list[float]],
     num_stores: int,

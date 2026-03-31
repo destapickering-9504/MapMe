@@ -37,20 +37,20 @@ function MapPreview() {
       aria-label="Map preview"
     >
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.2]"
+        className="hm-ref-planner-map-preview-grid pointer-events-none absolute inset-0 opacity-[0.2]"
         style={{
           backgroundImage: `linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px)`,
           backgroundSize: "48px 48px"
         }}
       />
-      <WorldMapWatermark />
+      <div className="hm-ref-planner-map-preview-watermark pointer-events-none absolute inset-0">
+        <WorldMapWatermark />
+      </div>
       <div className="hm-ref-planner-map-preview-tint pointer-events-none absolute inset-0" />
       <div className="relative z-[1] flex flex-1 flex-col items-center justify-center px-8 py-12">
-        <p className="hm-ref-planner-map-placeholder-title text-center text-[15px] font-semibold text-[color:var(--ref-path,#aeb4bf)]">
-          Your route will appear here.
-        </p>
+        <p className="hm-ref-planner-map-placeholder-title">Your route will appear here.</p>
       </div>
-      <div className="absolute bottom-4 right-4 z-[1] flex flex-col gap-2">
+      <div className="hm-ref-planner-map-preview-fake-controls absolute bottom-4 right-4 z-[1] flex flex-col gap-2">
         <div className="hm-ref-planner-map-fake-control text-lg">+</div>
         <div className="hm-ref-planner-map-fake-control text-lg">−</div>
         <div className="hm-ref-planner-map-fake-control text-base">⌖</div>

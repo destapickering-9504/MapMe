@@ -8,15 +8,16 @@ from app.core.config import settings
 from app.domain.models import OptimizeRequest, OptimizeResponse, RouteOption, StopDetail
 from app.domain.places import ResolvedLocation
 from app.domain.stop_query import effective_stop_anchor, stop_address_hint_after_comma
-from app.services.assignment_variants import expand_chain_assignment_variants
+from app.services.assignment_variants import assignment_fingerprint, expand_chain_assignment_variants
 from app.services.matrix_congestion import (
     amplify_legs_through_congestion_zone,
     build_travel_time_note,
     parse_congestion_bbox,
 )
 from app.services.optimizer import (
-    best_permutation_fixed_destination,
-    best_permutation_round_trip,
+    best_route_one_way_end_last_list_stop,
+    best_route_with_alternatives,
+    best_route_with_fixed_destination,
     zero_same_lot_store_matrix_legs,
 )
 from app.services.provider_factory import build_providers
@@ -74,6 +75,25 @@ def _geocode_anchor_for_stores(
         (origin_tuple[0] + dest_loc.lat) / 2.0,
         (origin_tuple[1] + dest_loc.lng) / 2.0,
     )
+
+
+def _pick_top_distinct_routes(
+    scored: list[tuple[list[ResolvedLocation], list[int], float]],
+    limit: int = 3,
+) -> list[tuple[list[ResolvedLocation], list[int], float]]:
+    """Keep fastest routes with distinct (store assignment × visit order)."""
+    scored = sorted(scored, key=lambda item: item[2])
+    out: list[tuple[list[ResolvedLocation], list[int], float]] = []
+    seen: set[tuple[tuple[tuple[float, float], ...], tuple[int, ...]]] = set()
+    for assign_locs, perm, minutes in scored:
+        key = (assignment_fingerprint(assign_locs), tuple(perm))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((assign_locs, perm, minutes))
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _route_option(
@@ -165,7 +185,7 @@ async def optimize_route(payload: OptimizeRequest) -> OptimizeResponse:
     )
 
     round_trip = payload.trip_mode == "round_trip"
-    scored_routes: list[tuple[list[ResolvedLocation], list[int], float]] = []
+    scored_entries: list[tuple[list[ResolvedLocation], list[int], float]] = []
 
     congestion_bbox = parse_congestion_bbox(settings.optimizer_congestion_bbox)
     congestion_factor = settings.optimizer_congestion_leg_multiplier
@@ -174,6 +194,8 @@ async def optimize_route(payload: OptimizeRequest) -> OptimizeResponse:
         and congestion_factor > 1.0
     )
     travel_time_note = build_travel_time_note(congestion_adjustment_active=congestion_on)
+
+    perm_top_n = max(15, math.factorial(n) if n <= 4 else 24)
 
     for assign_locs in assignments:
         if dest_loc is not None:
@@ -193,15 +215,23 @@ async def optimize_route(payload: OptimizeRequest) -> OptimizeResponse:
             )
 
         if dest_loc is not None:
-            perm, minutes = best_permutation_fixed_destination(matrix, n)
+            ranked_perms = best_route_with_fixed_destination(matrix, n, top_n=perm_top_n)
+        elif round_trip:
+            ranked_perms = best_route_with_alternatives(
+                matrix, n, round_trip=True, top_n=perm_top_n
+            )
         else:
-            perm, minutes = best_permutation_round_trip(matrix, n, round_trip)
-        scored_routes.append((assign_locs, perm, minutes))
+            ranked_perms = best_route_one_way_end_last_list_stop(
+                matrix, n, top_n=perm_top_n
+            )
 
-    scored_routes.sort(key=lambda item: item[2])
-    ranked = scored_routes[:3]
+        for perm, minutes in ranked_perms:
+            scored_entries.append((assign_locs, perm, minutes))
+
+    ranked = _pick_top_distinct_routes(scored_entries, limit=3)
 
     nf = math.factorial(n) if n > 0 else 1
+    nf_one_way_last_fixed = math.factorial(n - 1) if n > 1 else 1
     n_assign = len(assignments)
     if dest_loc is not None:
         explanation = (
@@ -217,8 +247,9 @@ async def optimize_route(payload: OptimizeRequest) -> OptimizeResponse:
         )
     else:
         explanation = (
-            f"Compared {n_assign} different store-location sets from search results and, for each, all {nf} "
-            "one-way visit orders. Listed routes use different matched locations where available."
+            f"Compared {n_assign} different store-location sets from search results and, for each, all "
+            f"{nf_one_way_last_fixed} one-way visit orders that end at your last listed stop (earlier stops "
+            "reordered for time). Listed routes use different matched locations where available."
         )
 
     route_geojson_options: list[dict | None] = []
@@ -242,13 +273,17 @@ async def optimize_route(payload: OptimizeRequest) -> OptimizeResponse:
     stops_resolved = [
         _to_stop_detail(payload.stores[i], best_assign_locs[i]) for i in range(n)
     ]
-    permutations_considered = n_assign * nf
+    if dest_loc is None and not round_trip and n >= 1:
+        permutations_considered = n_assign * nf_one_way_last_fixed
+    else:
+        permutations_considered = n_assign * nf
 
     best_route_geojson = route_geojson_options[0] if route_geojson_options else None
 
     return OptimizeResponse(
         trip_mode=payload.trip_mode,
         origin_query=payload.origin_place,
+        origin_label=payload.origin_label,
         origin_address=origin_loc.display_address,
         origin_lat=origin_loc.lat,
         origin_lng=origin_loc.lng,

@@ -25,6 +25,11 @@ vi.mock("react-leaflet", () => ({
   MapContainer: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="map-container">{children}</div>
   ),
+  useMap: () => ({
+    on: vi.fn(),
+    off: vi.fn(),
+    eachLayer: vi.fn()
+  }),
   TileLayer: () => null,
   Polyline: () => null,
   CircleMarker: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,

@@ -81,6 +81,20 @@ def test_optimize_endpoint_success() -> None:
     assert body["route_geojson_options"][0] is not None
 
 
+def test_optimize_echoes_origin_label() -> None:
+    payload = {
+        "origin_place": "94102",
+        "origin_label": "Home",
+        "stores": ["Target", "Whole Foods"],
+        "trip_mode": "round_trip",
+    }
+    response = client.post("/api/optimize", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["origin_query"] == "94102"
+    assert body["origin_label"] == "Home"
+
+
 def test_optimize_explicit_address_pins_hint_geocode_not_store_search(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -244,6 +258,22 @@ def test_optimize_geocode_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     response = client.post("/api/optimize", json=payload)
     assert response.status_code == 400
     assert "location" in response.json()["detail"].lower()
+
+
+def test_optimize_one_way_without_destination_ends_at_last_listed_stop() -> None:
+    """One-way + no destination_place: final stop must be the last store in the request list."""
+    payload = {
+        "origin_place": "94102",
+        "stores": ["Pharmacy", "Work"],
+        "trip_mode": "one_way",
+    }
+    response = client.post("/api/optimize", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["permutations_considered"] == 1
+    ordered = body["best_route"]["ordered_stores"]
+    assert ordered[-1] == "Work"
+    assert "last listed stop" in body["explanation"].lower()
 
 
 def test_optimize_with_destination_place() -> None:

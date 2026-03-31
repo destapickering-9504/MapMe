@@ -1,5 +1,8 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { MIN_PASSWORD_LEN } from "../auth/passwordRules";
+import {
+  PROFILE_PASSWORD_RULE_DESCRIPTIONS,
+  validateProfileNewPassword
+} from "../auth/passwordRules";
 import { describePasswordSignInError } from "../lib/authEmail";
 import { describeSupabaseNetworkFailure, isLikelyNetworkAuthFailure } from "../lib/supabaseNetworkError";
 import { supabase } from "../lib/supabaseClient";
@@ -11,7 +14,12 @@ interface Props {
   onSuccess: () => void;
 }
 
-export default function ChangePasswordModal({ open, onClose, userEmail, onSuccess }: Props) {
+export default function ChangePasswordModal({
+  open,
+  onClose,
+  userEmail,
+  onSuccess
+}: Props) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -50,8 +58,9 @@ export default function ChangePasswordModal({ open, onClose, userEmail, onSucces
       setError("Enter your current password.");
       return;
     }
-    if (next.length < MIN_PASSWORD_LEN) {
-      setError(`New password must be at least ${MIN_PASSWORD_LEN} characters.`);
+    const policyErr = validateProfileNewPassword(next);
+    if (policyErr) {
+      setError(policyErr);
       return;
     }
     if (next !== conf) {
@@ -115,6 +124,14 @@ export default function ChangePasswordModal({ open, onClose, userEmail, onSucces
           Enter your current password, then your new password twice. Your current password is checked before anything is
           updated.
         </p>
+        <div className="profile-password-rules" role="note">
+          <p className="profile-password-rules-title">New password must:</p>
+          <ul className="profile-password-rules-list">
+            {PROFILE_PASSWORD_RULE_DESCRIPTIONS.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
         <form className="profile-modal-form" onSubmit={(e) => void handleSubmit(e)}>
           <label className="auth-flow-label">
             <span className="auth-flow-label-text">Current password</span>
@@ -134,7 +151,7 @@ export default function ChangePasswordModal({ open, onClose, userEmail, onSucces
               className="auth-flow-input"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder={`At least ${MIN_PASSWORD_LEN} characters`}
+              placeholder="New password"
             />
           </label>
           <label className="auth-flow-label">

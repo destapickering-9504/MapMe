@@ -95,7 +95,11 @@ export async function listSavedTripsPage(params: ListSavedTripsPageParams = {}):
   return parsePageRpcPayload(data);
 }
 
-export async function insertSavedTrip(payload: OptimizeResponse, title?: string): Promise<void> {
+export async function insertSavedTrip(
+  payload: OptimizeResponse,
+  title?: string,
+  opts?: { isFavorite?: boolean }
+): Promise<string> {
   if (!supabase) throw new Error("Supabase is not configured");
   const {
     data: { user },
@@ -103,13 +107,20 @@ export async function insertSavedTrip(payload: OptimizeResponse, title?: string)
   } = await supabase.auth.getUser();
   if (userErr || !user) throw new Error("You must be signed in to save trips");
 
-  const { error } = await supabase.from("saved_trips").insert({
-    user_id: user.id,
-    title: title?.trim() || `Trip · ${payload.origin_query}`,
-    payload,
-    is_favorite: false
-  });
+  const { data, error } = await supabase
+    .from("saved_trips")
+    .insert({
+      user_id: user.id,
+      title: title?.trim() || `Trip · ${payload.origin_query}`,
+      payload,
+      is_favorite: Boolean(opts?.isFavorite)
+    })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+  const id = data && typeof (data as { id?: unknown }).id === "string" ? (data as { id: string }).id : null;
+  if (!id) throw new Error("No id returned from saved_trips insert");
+  return id;
 }
 
 export async function deleteSavedTrip(id: string): Promise<void> {

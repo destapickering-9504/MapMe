@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { insertSavedTrip } from "../api/savedTripsClient";
+import { insertSavedTrip, setSavedTripFavorite } from "../api/savedTripsClient";
 import SavedTripsPanel from "../components/SavedTripsPanel";
 import "../components/route-planner/plannerRef.css";
 import RouteBuilderPanel, { type SaveLocationToProfileResult } from "../components/route-planner/RouteBuilderPanel";
@@ -20,14 +20,9 @@ import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 import "./history/historyRef.css";
 import "./planner/planner.tailwind.css";
 
+/** Saved trip title (date lives in `created_at` only — avoids duplicating it in the favorites sidebar). */
 function historyTitleForPayload(data: OptimizeResponse): string {
-  const when = new Date().toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
-  return `${data.origin_query} · ${when}`;
+  return (data.origin_label ?? data.origin_query ?? "").trim() || "Route";
 }
 
 export const RESTORE_TRIP_STATE_KEY = "restoreTrip";
@@ -43,18 +38,39 @@ export default function RouteOptimizerPage() {
   const location = useLocation();
   const restoreConsumed = useRef(false);
 
+  const [activeSavedTrip, setActiveSavedTrip] = useState<{ id: string; isFavorite: boolean } | null>(null);
+  const [savedTripsListVersion, setSavedTripsListVersion] = useState(0);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+  /** Increment to remount the route builder (fresh start / stops) when user chooses “Optimize New Route”. */
+  const [builderResetKey, setBuilderResetKey] = useState(0);
+
   const onOptimized = useCallback(
-    (data: OptimizeResponse) => {
+    async (data: OptimizeResponse) => {
       if (!user || !configured) return;
-      void insertSavedTrip(data, historyTitleForPayload(data)).catch(() => {
+      try {
+        const id = await insertSavedTrip(data, historyTitleForPayload(data));
+        setActiveSavedTrip({ id, isFavorite: false });
+      } catch {
         /* non-fatal */
-      });
+      }
     },
     [user, configured]
   );
 
-  const { result, loading, error, run, applySavedResult } = useOptimizeRoute({ onOptimized });
-  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+  const { result, loading, error, run, clear, applySavedResult: applySavedResultBase } = useOptimizeRoute({
+    onOptimized
+  });
+
+  const applySavedResult = useCallback(
+    (data: OptimizeResponse, meta?: { savedTripId: string; isFavorite: boolean }) => {
+      applySavedResultBase(data);
+      setFavoriteError(null);
+      setActiveSavedTrip(meta ? { id: meta.savedTripId, isFavorite: meta.isFavorite } : null);
+    },
+    [applySavedResultBase]
+  );
   useEffect(() => {
     setSelectedRouteIndex(0);
   }, [result]);
@@ -73,8 +89,44 @@ export default function RouteOptimizerPage() {
   }, [location.state, applySavedResult, navigate]);
 
   const handleOptimize = (payload: OptimizeRequest) => {
+    setActiveSavedTrip(null);
+    setFavoriteError(null);
     void run(payload);
   };
+
+  const handleToggleFavorite = useCallback(async () => {
+    if (!result || !user || !configured) return;
+    const nextFavorite = !(activeSavedTrip?.isFavorite ?? false);
+    setFavoriteError(null);
+    setFavoriteBusy(true);
+    try {
+      let id = activeSavedTrip?.id ?? null;
+      if (!id) {
+        if (!nextFavorite) {
+          return;
+        }
+        id = await insertSavedTrip(result, historyTitleForPayload(result), { isFavorite: true });
+        setActiveSavedTrip({ id, isFavorite: true });
+        setSavedTripsListVersion((v) => v + 1);
+        return;
+      }
+      await setSavedTripFavorite(id, nextFavorite);
+      setActiveSavedTrip({ id, isFavorite: nextFavorite });
+      setSavedTripsListVersion((v) => v + 1);
+    } catch (e) {
+      setFavoriteError(e instanceof Error ? e.message : "Could not update favorite");
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }, [result, user, configured, activeSavedTrip]);
+
+  const handleOptimizeNewRoute = useCallback(() => {
+    clear();
+    setActiveSavedTrip(null);
+    setFavoriteError(null);
+    setSelectedRouteIndex(0);
+    setBuilderResetKey((k) => k + 1);
+  }, [clear]);
 
   const saveLocationToProfile = useCallback(
     async (name: string, address: string): Promise<SaveLocationToProfileResult> => {
@@ -110,6 +162,7 @@ export default function RouteOptimizerPage() {
         <div className="hm-ref-planner-builder-wrap">
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5 lg:pr-1">
             <RouteBuilderPanel
+              key={builderResetKey}
               onSubmit={handleOptimize}
               savedPlaces={savedPlaces}
               onSaveLocationToProfile={user && configured && supabase ? saveLocationToProfile : undefined}
@@ -133,7 +186,13 @@ export default function RouteOptimizerPage() {
                 </span>
               </summary>
               <div className="mt-3">
-                <SavedTripsPanel currentResult={result} onLoadTrip={applySavedResult} />
+                <SavedTripsPanel
+                  currentResult={result}
+                  listRefreshToken={savedTripsListVersion}
+                  onLoadTrip={(row) =>
+                    applySavedResult(row.payload, { savedTripId: row.id, isFavorite: row.is_favorite })
+                  }
+                />
               </div>
             </details>
           </div>
@@ -149,6 +208,15 @@ export default function RouteOptimizerPage() {
                   result={result}
                   selectedRouteIndex={selectedRouteIndex}
                   onSelectRoute={setSelectedRouteIndex}
+                  isFavorite={activeSavedTrip?.isFavorite ?? false}
+                  favoriteDisabled={!user || !configured}
+                  favoriteDisabledTitle={
+                    !user ? "Sign in to favorite routes" : !configured ? "Add Supabase env vars to use favorites" : undefined
+                  }
+                  favoriteBusy={favoriteBusy}
+                  favoriteError={favoriteError}
+                  onToggleFavorite={handleToggleFavorite}
+                  onOptimizeNewRoute={handleOptimizeNewRoute}
                 />
               </div>
             ) : null}

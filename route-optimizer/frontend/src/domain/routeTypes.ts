@@ -1,5 +1,10 @@
 export interface OptimizeRequest {
   origin_place: string;
+  /**
+   * Optional: saved start label (Home, Gym, …). Geocoding uses `origin_place` (address) only;
+   * the API echoes this for UI.
+   */
+  origin_label?: string | null;
   stores: string[];
   trip_mode: "round_trip" | "one_way";
   /** Optional API field: fixed end after stops (not used by the current planner UI). */
@@ -27,6 +32,8 @@ export interface GeoJsonLineString {
 export interface OptimizeResponse {
   trip_mode: "round_trip" | "one_way";
   origin_query: string;
+  /** Present when the user chose a saved start; prefer this for display over shortening `origin_query`. */
+  origin_label?: string | null;
   origin_address: string;
   origin_lat: number;
   origin_lng: number;

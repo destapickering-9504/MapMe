@@ -249,6 +249,15 @@ body {
   border-radius: 4px;
 }
 
+.app-global-footer__link--button {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
+}
+
 .app-global-footer__sep {
   color: var(--theme-border-input);
   font-weight: 700;
@@ -604,11 +613,6 @@ a.auth-landing-secondary-btn:hover {
   color: var(--theme-text);
 }
 
-.saved-trips-meta {
-  font-size: 12px;
-  color: var(--theme-text-muted);
-}
-
 .saved-trips-actions {
   display: flex;
   gap: 12px;
@@ -633,6 +637,36 @@ a.auth-landing-secondary-btn:hover {
 
 :root[data-theme="dark"] .saved-trips-linkish {
   color: var(--theme-salmon);
+}
+
+.saved-trips-card .muted-small {
+  color: var(--theme-text-sub);
+}
+
+.saved-trips-card .muted-small a {
+  color: var(--theme-salmon-deep);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.saved-trips-card .muted-small a:hover {
+  color: var(--theme-salmon);
+}
+
+:root[data-theme="dark"] .saved-trips-card .muted-small a {
+  color: var(--theme-salmon);
+}
+
+:root[data-theme="dark"] .saved-trips-card .muted-small a:hover {
+  color: var(--theme-salmon-deep);
+  filter: brightness(1.12);
+}
+
+.saved-trips-meta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text-sub);
 }
 
 .app-shell {
@@ -1147,7 +1181,7 @@ a.auth-landing-secondary-btn:hover {
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
+  z-index: 13000;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1198,6 +1232,48 @@ a.auth-landing-secondary-btn:hover {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
+/* During CSS zoom animation Leaflet scales old raster tiles — hide them so we do not see stretched imagery. */
+.route-map-leaflet-mount .leaflet-map-pane.leaflet-zoom-anim .leaflet-tile-pane {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Cover basemap while new zoom level loads (after animation); sits above the whole map stack */
+.route-map-retiling-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(248, 250, 252, 0.96);
+}
+
+:root[data-theme="dark"] .route-map-retiling-cover {
+  background: rgba(13, 16, 21, 0.96);
+}
+
+.route-map-retiling-spinner {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--theme-accent, #d97a62);
+  animation: route-map-retiling-spin 0.65s linear infinite;
+}
+
+:root[data-theme="dark"] .route-map-retiling-spinner {
+  border-color: rgba(255, 255, 255, 0.12);
+  border-top-color: #7dd3fc;
+}
+
+@keyframes route-map-retiling-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .route-planner-live-map .leaflet-bottom.leaflet-right {
   margin-right: 12px;
   margin-bottom: 12px;
@@ -1208,6 +1284,7 @@ a.auth-landing-secondary-btn:hover {
   background: transparent !important;
 }
 
+/* Start: green */
 .route-planner-live-map .route-planner-pin-origin {
   display: flex;
   align-items: center;
@@ -1216,17 +1293,18 @@ a.auth-landing-secondary-btn:hover {
   height: 34px;
   margin: 0 auto;
   border-radius: 50%;
-  background: linear-gradient(180deg, #7dd4b4 0%, #5cba98 50%, #3da67f 100%);
-  border: 2px solid #a8e6d4;
+  background: linear-gradient(180deg, #6ee7b7 0%, #34d399 45%, #10b981 100%);
+  border: 2px solid #a7f3d0;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.2),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+    0 0 0 1px rgba(0, 0, 0, 0.22),
+    0 8px 24px rgba(0, 0, 0, 0.45);
   font-size: 15px;
   line-height: 1;
-  color: #0f1115;
+  color: #064e3b;
   font-weight: 800;
 }
 
+/* Numbered stops: orange (MapMe accent) */
 .route-planner-live-map .route-planner-pin-stop {
   display: flex;
   align-items: center;
@@ -1235,14 +1313,15 @@ a.auth-landing-secondary-btn:hover {
   height: 28px;
   margin: 0 auto;
   border-radius: 50%;
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
+  background: linear-gradient(180deg, #fdba74 0%, var(--theme-salmon, #d97a62) 48%, #c2410c 100%);
+  border: 2px solid #fed7aa;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.12),
-    0 6px 18px rgba(0, 0, 0, 0.35);
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 6px 18px rgba(0, 0, 0, 0.4);
   font-size: 12px;
   font-weight: 800;
-  color: #1a1d24;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 :root[data-theme="dark"] .route-planner-live-map .leaflet-control-zoom {
@@ -1300,24 +1379,6 @@ a.auth-landing-secondary-btn:hover {
 .map-panel-live .leaflet-control-zoom-out {
   border-radius: 0 0 14px 14px !important;
   border-bottom: none !important;
-}
-
-.map-panel-live .leaflet-control-attribution {
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(10px);
-  border-radius: 10px 0 0 0;
-  padding: 6px 10px !important;
-  font-size: 11px !important;
-  font-weight: 500;
-  color: var(--theme-text-muted) !important;
-  max-width: calc(100% - 16px);
-  line-height: 1.35;
-  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
-}
-
-.map-panel-live .leaflet-control-attribution a {
-  color: var(--theme-salmon-deep);
-  font-weight: 600;
 }
 
 .map-panel-empty {
@@ -1529,8 +1590,10 @@ a.auth-landing-secondary-btn:hover {
   background: var(--theme-bg-card);
   box-shadow: var(--theme-shadow);
   color: var(--theme-text);
-  max-width: min(380px, calc(100vw - 32px));
+  max-width: min(440px, calc(100vw - 32px));
   pointer-events: auto;
+  /* Leaflet defaults to nowrap; allow long addresses to wrap inside the card */
+  white-space: normal;
 }
 
 .route-map-marker-tooltip.leaflet-tooltip::before {
@@ -1538,10 +1601,12 @@ a.auth-landing-secondary-btn:hover {
 }
 
 .route-marker-card {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: min(440px, calc(100vw - 32px));
   font-family: var(--font-ui);
   color: var(--theme-text);
   line-height: 1.4;
-  max-width: 360px;
 }
 
 .route-marker-card-preview {
@@ -1575,6 +1640,8 @@ a.auth-landing-secondary-btn:hover {
   color: var(--theme-salmon-deep);
   line-height: 1.25;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .route-marker-card-fields {
@@ -1603,6 +1670,8 @@ a.auth-landing-secondary-btn:hover {
   font-size: 14px;
   color: var(--theme-text-sub);
   line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .route-marker-card-field a {
@@ -2088,6 +2157,158 @@ a.auth-landing-secondary-btn:hover {
   padding-left: 44px;
 }
 
+.auth-flow-input--trail-check {
+  padding-right: 42px;
+}
+
+.auth-flow-input--reveal-eye {
+  padding-right: 48px;
+}
+
+.auth-flow-input--reveal-eye.auth-flow-input--trail-check {
+  padding-right: 80px;
+}
+
+.auth-flow-input-reveal-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  line-height: 0;
+  cursor: pointer;
+  transform: translateY(-50%);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-flow-input-reveal-btn:hover {
+  color: var(--theme-text);
+}
+
+.auth-flow-input-reveal-btn:focus-visible {
+  outline: 2px solid var(--theme-salmon-deep);
+  outline-offset: 2px;
+}
+
+.auth-flow-input-trailing {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.auth-flow-input-trailing--shift-for-reveal {
+  right: 48px;
+}
+
+.auth-flow-input-trailing--ok {
+  color: var(--theme-mint-deep);
+}
+
+.auth-flow-password-rules-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--theme-text-muted);
+}
+
+.auth-flow-password-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.auth-flow-password-rule + .auth-flow-password-rule {
+  margin-top: 6px;
+}
+
+.auth-flow-password-rule-mark {
+  flex-shrink: 0;
+  width: 1.15rem;
+  margin-top: 1px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.auth-flow-password-rule-mark--ok {
+  color: var(--theme-mint-deep);
+}
+
+.auth-flow-password-rule-mark--no {
+  color: var(--theme-text-muted);
+  opacity: 0.45;
+}
+
+.auth-flow-password-rule-mark--strength-bad {
+  color: var(--theme-danger);
+  opacity: 1;
+}
+
+.auth-flow-password-rule-mark--medium {
+  color: #ca8a04;
+  opacity: 1;
+}
+
+.auth-flow-password-rules-below {
+  margin: 10px 0 16px;
+}
+
+.auth-flow-password-strength-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--theme-text-muted);
+}
+
+.auth-flow-password-strength-text {
+  min-width: 0;
+}
+
+.auth-flow-password-strength-label {
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.auth-flow-password-strength-row--weak .auth-flow-password-strength-label {
+  color: var(--theme-danger);
+}
+
+.auth-flow-password-strength-row--medium .auth-flow-password-strength-label {
+  color: #ca8a04;
+}
+
+.auth-flow-password-strength-row--strong .auth-flow-password-strength-label {
+  color: var(--theme-mint-deep);
+}
+
+.auth-flow-password-rule-text {
+  min-width: 0;
+  flex: 1;
+}
+
 .auth-flow-input:focus {
   outline: none;
   border-color: var(--theme-salmon-deep);
@@ -2148,29 +2369,6 @@ a.auth-landing-secondary-btn:hover {
   color: var(--theme-danger);
   white-space: pre-line;
   line-height: 1.45;
-}
-
-.auth-flow-info {
-  display: flex;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: #e8f4fc;
-  border: 1px solid #b8d9f0;
-  font-size: 14px;
-  line-height: 1.45;
-  color: #1e3a5f;
-}
-
-:root[data-theme="dark"] .auth-flow-info {
-  background: rgba(30, 58, 95, 0.35);
-  border-color: rgba(120, 180, 220, 0.35);
-  color: #cbd5e1;
-}
-
-.auth-flow-info-icon {
-  flex-shrink: 0;
-  font-size: 18px;
 }
 
 .auth-flow-footnote {
@@ -2540,7 +2738,35 @@ a.auth-landing-secondary-btn:hover {
 }
 
 .profile-modal-lead {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+
+.profile-password-rules {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border);
+  background: color-mix(in srgb, var(--theme-bg-panel) 70%, transparent);
+}
+
+.profile-password-rules-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-text);
+}
+
+.profile-password-rules-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--theme-text-muted);
+}
+
+.profile-password-rules-list li + li {
+  margin-top: 4px;
 }
 
 .profile-modal-form {
@@ -3277,67 +3503,12 @@ button.profile-ref-avatar-trigger:disabled {
   min-width: 0;
 }
 
-.profile-ref-hero-identity-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  width: 100%;
-}
-
-.profile-ref-name-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin: 0;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 .profile-ref-hero-name {
   margin: 0;
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--theme-text);
-}
-
-.profile-ref-verified {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: rgba(56, 189, 248, 0.14);
-  color: #7dd3fc;
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  cursor: help;
-}
-
-.profile-ref-unverified-note {
-  margin: 8px auto 0;
-  max-width: 32rem;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--theme-text-muted);
-  text-align: center;
-}
-
-.profile-ref-hero-email {
-  margin: 0 0 0 auto;
-  font-size: 14px;
-  color: var(--theme-text-muted);
-  word-break: break-word;
-  text-align: right;
-  flex: 0 1 auto;
-  max-width: 100%;
 }
 
 /* Profile photo / cover modals (LinkedIn-style) */

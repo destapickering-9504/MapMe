@@ -1,6 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L, { type LatLngExpression } from "leaflet";
-import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip } from "react-leaflet";
+import {
+  CircleMarker,
+  MapContainer,
+  Marker,
+  Polyline,
+  TileLayer,
+  Tooltip,
+  useMap
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { OptimizeResponse } from "../domain/routeTypes";
 import { linePositionsForRouteIndex, routeOptionByIndex, routeOptionCount } from "../map/routeSelection";
@@ -44,17 +52,88 @@ const PLANNER_STOP_ICONS = Array.from({ length: 10 }, (_, i) =>
     iconAnchor: [15, 15]
   })
 );
-const PIN_ORIGIN_LIGHT = { color: "#FEA993", fillColor: "#ffffff", weight: 3 };
-const PIN_ORIGIN_DARK = { color: "#4cbf9f", fillColor: "#0f172a", weight: 2.5 };
-const PIN_STOP_LIGHT = { color: "#4cbf9f", fillColor: "#ffffff", weight: 2.5 };
-const PIN_STOP_DARK = { color: "#38bdf8", fillColor: "#0f172a", weight: 2.5 };
+const PIN_ORIGIN_LIGHT = { color: "#059669", fillColor: "#ecfdf5", weight: 3 };
+const PIN_ORIGIN_DARK = { color: "#34d399", fillColor: "#0f172a", weight: 2.5 };
+const PIN_STOP_LIGHT = { color: "#ea580c", fillColor: "#fff7ed", weight: 2.5 };
+const PIN_STOP_DARK = { color: "#fb923c", fillColor: "#0f172a", weight: 2.5 };
 const PIN_END_LIGHT = { color: "#6366f1", fillColor: "#ffffff", weight: 3 };
 const PIN_END_DARK = { color: "#fb923c", fillColor: "#0f172a", weight: 2.5 };
 
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions/">CARTO</a>';
 const TILE_URL_LIGHT = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 const TILE_URL_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+
+function originMarkerTitle(r: { origin_label?: string | null; origin_query: string }): string {
+  return r.origin_label?.trim() || r.origin_query || "Starting location";
+}
+
+function firstTileLayer(map: L.Map): L.TileLayer | null {
+  let found: L.TileLayer | null = null;
+  map.eachLayer((layer) => {
+    if (layer instanceof L.TileLayer && !found) found = layer;
+  });
+  return found;
+}
+
+/**
+ * Shows a cover while zooming / re-tiling: zoomstart turns it on; after zoomend we wait for the basemap
+ * `load` (or a timeout) so zoom-out does not flash the previous zoom’s tiles. `zoomstart`/`zoomend` in the
+ * same tick would batch React updates incorrectly if we only toggled on zoomend, so completion is deferred.
+ */
+function MapRetilingOverlayControl({ onBusy }: { onBusy: (busy: boolean) => void }) {
+  const map = useMap();
+  const endGenRef = useRef(0);
+  const fallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const clearFallback = () => {
+      if (fallbackRef.current != null) {
+        clearTimeout(fallbackRef.current);
+        fallbackRef.current = null;
+      }
+    };
+
+    const onZoomStart = () => {
+      clearFallback();
+      onBusy(true);
+    };
+
+    const onZoomEnd = () => {
+      endGenRef.current += 1;
+      const g = endGenRef.current;
+      clearFallback();
+
+      const finish = () => {
+        if (g !== endGenRef.current) return;
+        clearFallback();
+        onBusy(false);
+      };
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (g !== endGenRef.current) return;
+          const tile = firstTileLayer(map);
+          if (tile) {
+            tile.once("load", finish);
+            fallbackRef.current = setTimeout(finish, 2200);
+          } else {
+            finish();
+          }
+        });
+      });
+    };
+
+    map.on("zoomstart", onZoomStart);
+    map.on("zoomend", onZoomEnd);
+
+    return () => {
+      clearFallback();
+      map.off("zoomstart", onZoomStart);
+      map.off("zoomend", onZoomEnd);
+    };
+  }, [map, onBusy]);
+
+  return null;
+}
 
 export default function RouteMap({ result, selectedRouteIndex, embedded = false }: Props) {
   const { theme } = useTheme();
@@ -88,6 +167,8 @@ export default function RouteMap({ result, selectedRouteIndex, embedded = false 
   const shellClass = embedded
     ? "route-map-embed map-panel-live relative h-full w-full min-h-0 flex-1 overflow-hidden"
     : "map-panel map-panel-live";
+
+  const [mapRetiling, setMapRetiling] = useState(false);
 
   if (!showMap) {
     return (
@@ -123,14 +204,24 @@ export default function RouteMap({ result, selectedRouteIndex, embedded = false 
         className="route-map-leaflet-mount"
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom
+        attributionControl={false}
+        {...(embedded
+          ? {
+              // Planner: avoid blank frames mid-zoom (new tiles + fade read like the static preview).
+              fadeAnimation: false,
+              zoomAnimation: true
+            }
+          : {})}
       >
         <TileLayer
-          attribution={TILE_ATTRIBUTION}
+          attribution=""
           url={tileUrl}
           subdomains="abcd"
           maxZoom={19}
           maxNativeZoom={18}
+          updateWhenZooming={false}
         />
+        <MapRetilingOverlayControl onBusy={setMapRetiling} />
         {result && positions.length >= 2 && plannerDecor && (
           <Polyline
             key={`route-glow-${safeRouteIndex}`}
@@ -150,7 +241,7 @@ export default function RouteMap({ result, selectedRouteIndex, embedded = false 
             <Marker position={[result.origin_lat, result.origin_lng]} icon={PLANNER_ORIGIN_ICON}>
               <Tooltip {...markerTooltipProps} offset={[0, -14]}>
                 <RouteMapMarkerPopup
-                  title={result.origin_query || "Starting location"}
+                  title={originMarkerTitle(result)}
                   lat={result.origin_lat}
                   lng={result.origin_lng}
                   imageAlt={`Map preview near ${result.origin_query}`}
@@ -169,7 +260,7 @@ export default function RouteMap({ result, selectedRouteIndex, embedded = false 
             >
               <Tooltip {...markerTooltipProps} offset={[0, -14]}>
                 <RouteMapMarkerPopup
-                  title={result.origin_query || "Starting location"}
+                  title={originMarkerTitle(result)}
                   lat={result.origin_lat}
                   lng={result.origin_lng}
                   imageAlt={`Map preview near ${result.origin_query}`}
@@ -251,6 +342,16 @@ export default function RouteMap({ result, selectedRouteIndex, embedded = false 
             </CircleMarker>
           )}
       </MapContainer>
+      {mapRetiling ? (
+        <div
+          className="route-map-retiling-cover"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label="Loading map tiles"
+        >
+          <div className="route-map-retiling-spinner" aria-hidden />
+        </div>
+      ) : null}
     </div>
   );
 }

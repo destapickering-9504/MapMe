@@ -135,7 +135,9 @@ describe("SavedTripsPanel", () => {
     const link = screen.getByRole("link", { name: /^history$/i });
     expect(link.getAttribute("href")).toBe(ROUTE_HISTORY_PATH);
     fireEvent.click(screen.getByRole("button", { name: /^load$/i }));
-    expect(onLoad).toHaveBeenCalledWith(samplePayload);
+    expect(onLoad).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "row-1", payload: samplePayload, is_favorite: true })
+    );
   });
 
   test("unstar calls API and refreshes", async () => {

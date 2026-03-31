@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   isOnboardingComplete,
@@ -7,7 +7,11 @@ import {
   toggleTravelMode,
   type TravelMode
 } from "../auth/onboardingGate";
-import { MIN_PASSWORD_LEN } from "../auth/passwordRules";
+import {
+  PROFILE_PASSWORD_MIN_LENGTH,
+  profilePasswordRuleStates,
+  validateProfileNewPassword
+} from "../auth/passwordRules";
 import { useAuth } from "../auth/AuthContext";
 import { TRAVEL_MODE_UI } from "../domain/travelModesUi";
 import { describePasswordSignInError, normalizeAuthEmail } from "../lib/authEmail";
@@ -16,6 +20,45 @@ import { MapMeLogoThemed } from "../components/MapMeLogo";
 import { supabase } from "../lib/supabaseClient";
 import { RESET_PASSWORD_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 import "../App.css";
+
+/** Reveal password only while the control is pressed (pointer down → up / leave / cancel). */
+function RevealPasswordEyeButton({
+  ariaLabel,
+  onRevealChange
+}: {
+  ariaLabel: string;
+  onRevealChange: (revealed: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="auth-flow-input-reveal-btn"
+      aria-label={ariaLabel}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        onRevealChange(true);
+      }}
+      onPointerUp={() => onRevealChange(false)}
+      onPointerLeave={() => onRevealChange(false)}
+      onPointerCancel={() => onRevealChange(false)}
+    >
+      <svg
+        width={20}
+        height={20}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    </button>
+  );
+}
 
 /** 1 = sign in / sign up, 2 = profile onboarding */
 type Step = 1 | 2;
@@ -38,6 +81,27 @@ export default function AuthFlowPage() {
   const [busy, setBusy] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
+  const [revealSignUpPassword, setRevealSignUpPassword] = useState(false);
+  const [revealSignUpConfirm, setRevealSignUpConfirm] = useState(false);
+  const [revealSignInPassword, setRevealSignInPassword] = useState(false);
+
+  /** Same trimmed basis as submit validation so rules and checks update while typing. */
+  const signUpRuleStates = useMemo(() => profilePasswordRuleStates(signUpPassword.trim()), [signUpPassword]);
+  const signUpPasswordOk = useMemo(() => signUpRuleStates.every((r) => r.pass), [signUpRuleStates]);
+  const signUpPasswordStrength = useMemo((): "weak" | "medium" | "strong" | null => {
+    if (!signUpPassword.trim()) return null;
+    const passed = signUpRuleStates.filter((r) => r.pass).length;
+    const total = signUpRuleStates.length;
+    if (passed === total) return "strong";
+    if (passed >= Math.max(1, total - 1)) return "medium";
+    return "weak";
+  }, [signUpPassword, signUpRuleStates]);
+  const signUpConfirmOk = useMemo(() => {
+    const p = signUpPassword.trim();
+    const c = signUpPasswordConfirm.trim();
+    if (!p || !c || !signUpPasswordOk) return false;
+    return p === c;
+  }, [signUpPassword, signUpPasswordConfirm, signUpPasswordOk]);
 
   useEffect(() => {
     if (!supabase || authLoading) return;
@@ -74,8 +138,9 @@ export default function AuthFlowPage() {
       setError("Enter and confirm your password.");
       return;
     }
-    if (p.length < MIN_PASSWORD_LEN) {
-      setError(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
+    const policyErr = validateProfileNewPassword(p);
+    if (policyErr) {
+      setError(policyErr);
       return;
     }
     if (p !== p2) {
@@ -310,11 +375,9 @@ export default function AuthFlowPage() {
               {!(authTab === "sign-up" && signUpEmailSent) ? (
                 <>
                   <h1 className="auth-flow-title">Sign in or create your account</h1>
-                  <p className="auth-flow-sub">
-                    {authTab === "sign-in"
-                      ? "Use the email and password for your account."
-                      : "We&apos;ll send a link to verify your email. After that, sign in with the same password."}
-                  </p>
+                  {authTab === "sign-in" ? (
+                    <p className="auth-flow-sub">Use the email and password for your account.</p>
+                  ) : null}
 
                   <div className="auth-flow-method-toggle" role="tablist" aria-label="Account">
                     <button
@@ -382,17 +445,79 @@ export default function AuthFlowPage() {
                         🔑
                       </span>
                       <input
-                        type="password"
+                        type={revealSignUpPassword ? "text" : "password"}
                         autoComplete="new-password"
-                        placeholder={`At least ${MIN_PASSWORD_LEN} characters`}
-                        className="auth-flow-input auth-flow-input-padded"
+                        placeholder="8+ characters, A–Z, number, symbol"
+                        className={[
+                          "auth-flow-input auth-flow-input-padded auth-flow-input--reveal-eye",
+                          signUpPasswordOk ? "auth-flow-input--trail-check" : ""
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                         value={signUpPassword}
                         onChange={(e) => setSignUpPassword(e.target.value)}
                         required
-                        minLength={MIN_PASSWORD_LEN}
+                        minLength={PROFILE_PASSWORD_MIN_LENGTH}
+                        aria-invalid={signUpPassword.trim().length > 0 && !signUpPasswordOk}
+                      />
+                      {signUpPasswordOk ? (
+                        <span
+                          className="auth-flow-input-trailing auth-flow-input-trailing--ok auth-flow-input-trailing--shift-for-reveal"
+                          aria-hidden
+                        >
+                          ✓
+                        </span>
+                      ) : null}
+                      <RevealPasswordEyeButton
+                        ariaLabel="Show password while pressed"
+                        onRevealChange={setRevealSignUpPassword}
                       />
                     </span>
                   </label>
+                  <div className="auth-flow-password-rules-below" role="status" aria-live="polite">
+                    {signUpPasswordStrength ? (
+                      <div
+                        className={[
+                          "auth-flow-password-strength-row",
+                          `auth-flow-password-strength-row--${signUpPasswordStrength}`
+                        ].join(" ")}
+                      >
+                        <span
+                          className={[
+                            "auth-flow-password-rule-mark",
+                            signUpPasswordStrength === "strong"
+                              ? "auth-flow-password-rule-mark--ok"
+                              : signUpPasswordStrength === "medium"
+                                ? "auth-flow-password-rule-mark--medium"
+                                : "auth-flow-password-rule-mark--strength-bad"
+                          ].join(" ")}
+                          aria-hidden
+                        >
+                          {signUpPasswordStrength === "strong" ? "✓" : signUpPasswordStrength === "medium" ? "◐" : "✕"}
+                        </span>
+                        <span className="auth-flow-password-strength-text">
+                          Password strength:{" "}
+                          <strong className="auth-flow-password-strength-label">{signUpPasswordStrength}</strong>
+                        </span>
+                      </div>
+                    ) : null}
+                    <ul className="auth-flow-password-rules-list">
+                      {signUpRuleStates.map((rule) => (
+                        <li key={rule.id} className="auth-flow-password-rule">
+                          <span
+                            className={[
+                              "auth-flow-password-rule-mark",
+                              rule.pass ? "auth-flow-password-rule-mark--ok" : "auth-flow-password-rule-mark--no"
+                            ].join(" ")}
+                            aria-hidden
+                          >
+                            {rule.pass ? "✓" : "○"}
+                          </span>
+                          <span className="auth-flow-password-rule-text">{rule.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                   <label className="auth-flow-label">
                     <span className="auth-flow-label-text">Confirm password</span>
                     <span className="auth-flow-input-wrap">
@@ -400,14 +525,34 @@ export default function AuthFlowPage() {
                         🔑
                       </span>
                       <input
-                        type="password"
+                        type={revealSignUpConfirm ? "text" : "password"}
                         autoComplete="new-password"
                         placeholder="Same as above"
-                        className="auth-flow-input auth-flow-input-padded"
+                        className={[
+                          "auth-flow-input auth-flow-input-padded auth-flow-input--reveal-eye",
+                          signUpConfirmOk ? "auth-flow-input--trail-check" : ""
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                         value={signUpPasswordConfirm}
                         onChange={(e) => setSignUpPasswordConfirm(e.target.value)}
                         required
-                        minLength={MIN_PASSWORD_LEN}
+                        minLength={PROFILE_PASSWORD_MIN_LENGTH}
+                        aria-invalid={
+                          signUpPasswordConfirm.trim().length > 0 && signUpPasswordOk && !signUpConfirmOk
+                        }
+                      />
+                      {signUpConfirmOk ? (
+                        <span
+                          className="auth-flow-input-trailing auth-flow-input-trailing--ok auth-flow-input-trailing--shift-for-reveal"
+                          aria-hidden
+                        >
+                          ✓
+                        </span>
+                      ) : null}
+                      <RevealPasswordEyeButton
+                        ariaLabel="Show confirm password while pressed"
+                        onRevealChange={setRevealSignUpConfirm}
                       />
                     </span>
                   </label>
@@ -508,13 +653,17 @@ export default function AuthFlowPage() {
                         🔑
                       </span>
                       <input
-                        type="password"
+                        type={revealSignInPassword ? "text" : "password"}
                         autoComplete="current-password"
                         placeholder="Your password"
-                        className="auth-flow-input auth-flow-input-padded"
+                        className="auth-flow-input auth-flow-input-padded auth-flow-input--reveal-eye"
                         value={signInPassword}
                         onChange={(e) => setSignInPassword(e.target.value)}
                         required
+                      />
+                      <RevealPasswordEyeButton
+                        ariaLabel="Show password while pressed"
+                        onRevealChange={setRevealSignInPassword}
                       />
                     </span>
                   </label>
@@ -540,20 +689,6 @@ export default function AuthFlowPage() {
                     {busy ? "Signing in…" : "Sign in"}
                   </button>
                 </form>
-              )}
-
-              {!signUpEmailSent && (
-                <div className="auth-flow-info">
-                  <span className="auth-flow-info-icon" aria-hidden>
-                    🛡
-                  </span>
-                  <p>
-                    <strong>Email and password only.</strong>{" "}
-                    {authTab === "sign-up"
-                      ? "Supabase sends the verification message; your password stays on the sign-in screen after you confirm."
-                      : "New here? Use Sign up first, confirm your email, then sign in."}
-                  </p>
-                </div>
               )}
 
               <Link to={ROUTE_OPTIMIZER_PATH} className="auth-flow-guest">

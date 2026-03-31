@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./plannerRef.css";
 import type { OptimizeRequest } from "../../domain/routeTypes";
 import { buildStopSearchQuery } from "../../domain/stopQueryBuild";
-import type { ProfileSavedPlace } from "../../domain/profileSavedPlaces";
+import {
+  originConsumesSavedPlace,
+  savedOriginLabelForPlaceField,
+  type ProfileSavedPlace
+} from "../../domain/profileSavedPlaces";
 import AddressAutocomplete from "../AddressAutocomplete";
 import StartLocationCombobox from "../StartLocationCombobox";
 import StopPlaceCombobox from "../StopPlaceCombobox";
@@ -60,9 +64,19 @@ function rowToQuery(row: StopRowModel): { ok: true; query: string } | { ok: fals
   return { ok: true, query: name };
 }
 
+function savedPlaceIdsUsedByStops(stops: StopRowModel[]): Set<string> {
+  return new Set(stops.filter((r) => r.savedLocationId).map((r) => r.savedLocationId as string));
+}
+
+function savedPlacesSelectableForStart(stops: StopRowModel[], savedPlaces: ProfileSavedPlace[]): ProfileSavedPlace[] {
+  const usedByStops = savedPlaceIdsUsedByStops(stops);
+  return savedPlaces.filter((s) => !usedByStops.has(s.id));
+}
+
 function savedPlacesSelectableForRow(
   stops: StopRowModel[],
   rowId: string,
+  originPlace: string,
   savedPlaces: ProfileSavedPlace[]
 ): ProfileSavedPlace[] {
   const row = stops.find((r) => r.id === rowId);
@@ -70,7 +84,12 @@ function savedPlacesSelectableForRow(
   const usedElsewhere = new Set(
     stops.filter((r) => r.id !== rowId && r.savedLocationId).map((r) => r.savedLocationId as string)
   );
-  return savedPlaces.filter((s) => !usedElsewhere.has(s.id) || s.id === currentId);
+  return savedPlaces.filter((s) => {
+    if (s.id === currentId) return true;
+    if (usedElsewhere.has(s.id)) return false;
+    if (originConsumesSavedPlace(originPlace, s)) return false;
+    return true;
+  });
 }
 
 function sameSavedPlace(a: string, b: string, c: string, d: string): boolean {
@@ -200,8 +219,10 @@ export default function RouteBuilderPanel({
     }
 
     setError(null);
+    const origin_label = savedOriginLabelForPlaceField(place, savedPlaceList);
     onSubmit({
       origin_place: place,
+      ...(origin_label ? { origin_label } : {}),
       stores: queries,
       trip_mode: tripMode
     });
@@ -264,7 +285,7 @@ export default function RouteBuilderPanel({
           inputId="origin-place"
           value={originPlace}
           onChange={setOriginPlace}
-          savedPlaces={savedPlaces}
+          savedPlaces={savedPlacesSelectableForStart(stops, savedPlaceList)}
           placeholder="Where are you leaving from?"
           ariaLabel="origin-place-input"
         />
@@ -278,7 +299,7 @@ export default function RouteBuilderPanel({
 
       <div className="hm-ref-planner-stops-rail flex flex-col gap-3">
         {stops.map((row, i) => {
-          const placeOptions = savedPlacesSelectableForRow(stops, row.id, savedPlaceList);
+          const placeOptions = savedPlacesSelectableForRow(stops, row.id, originPlace, savedPlaceList);
           const displayName = row.name.trim() || `Stop ${i + 1}`;
           const variant = stopIconVariantForName(row.name);
           return (
