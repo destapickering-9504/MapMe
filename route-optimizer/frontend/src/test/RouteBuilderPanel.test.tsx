@@ -1,14 +1,21 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { cleanup, fireEvent, render as rtlRender, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import StoreInputForm from "../components/StoreInputForm";
+import RouteBuilderPanel from "../components/route-planner/RouteBuilderPanel";
+import "../components/route-planner/plannerRef.css";
+import "../pages/planner/planner.tailwind.css";
 
-describe("StoreInputForm", () => {
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: ({ children }) => <div className="hm-history-root">{children}</div> });
+}
+
+describe("RouteBuilderPanel", () => {
   afterEach(() => cleanup());
 
   test("prefills origin when a saved start location is selected", async () => {
     const onSubmit = vi.fn();
     render(
-      <StoreInputForm
+      <RouteBuilderPanel
         onSubmit={onSubmit}
         savedPlaces={[
           { id: "h1", label: "Home", address: "Oakland, CA 94102", query: "Oakland, CA 94102" }
@@ -33,7 +40,7 @@ describe("StoreInputForm", () => {
 
   test("submits store names from stop rows", () => {
     const onSubmit = vi.fn();
-    render(<StoreInputForm onSubmit={onSubmit} />);
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "Los Angeles, CA" }
     });
@@ -52,9 +59,27 @@ describe("StoreInputForm", () => {
     expect(payload.destination_place).toBeUndefined();
   });
 
+  test("submits one_way when one-way trip type is selected", () => {
+    const onSubmit = vi.fn();
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
+    fireEvent.change(screen.getByLabelText("origin-place-input"), {
+      target: { value: "Portland, OR" }
+    });
+    fireEvent.change(screen.getByLabelText("Stop 1 store or place name"), {
+      target: { value: "Petco" }
+    });
+    fireEvent.change(screen.getByLabelText("Stop 2 store or place name"), {
+      target: { value: "Whole Foods" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: /One [Ww]ay End at last stop/i }));
+    fireEvent.click(screen.getByText("Optimize Route"));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0].trip_mode).toBe("one_way");
+  });
+
   test("combines name and address when specific address is enabled", () => {
     const onSubmit = vi.fn();
-    render(<StoreInputForm onSubmit={onSubmit} />);
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "Seattle, WA" }
     });
@@ -76,7 +101,7 @@ describe("StoreInputForm", () => {
 
   test("dedupes POI name when address autocomplete repeats the place name", () => {
     const onSubmit = vi.fn();
-    render(<StoreInputForm onSubmit={onSubmit} />);
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "Seattle, WA" }
     });
@@ -101,7 +126,7 @@ describe("StoreInputForm", () => {
 
   test("blocks submit when fewer than two named stops", () => {
     const onSubmit = vi.fn();
-    render(<StoreInputForm onSubmit={onSubmit} />);
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "Seattle, WA" }
     });
@@ -118,7 +143,7 @@ describe("StoreInputForm", () => {
 
   test("blocks submit when specific address is on but address empty", () => {
     const onSubmit = vi.fn();
-    render(<StoreInputForm onSubmit={onSubmit} />);
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "Seattle, WA" }
     });
@@ -136,7 +161,7 @@ describe("StoreInputForm", () => {
 
   test("blocks submit when starting location is empty", () => {
     const onSubmit = vi.fn();
-    render(<StoreInputForm onSubmit={onSubmit} />);
+    render(<RouteBuilderPanel onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText("origin-place-input"), {
       target: { value: "   " }
     });
@@ -146,7 +171,7 @@ describe("StoreInputForm", () => {
   });
 
   test("add stop appends a row", () => {
-    render(<StoreInputForm onSubmit={vi.fn()} />);
+    render(<RouteBuilderPanel onSubmit={vi.fn()} />);
     expect(screen.getAllByLabelText(/Stop \d store or place name/)).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: /Add another stop/i }));
     expect(screen.getAllByLabelText(/Stop \d store or place name/)).toHaveLength(3);
@@ -159,7 +184,7 @@ describe("StoreInputForm", () => {
       { id: "s2", label: "Whole Foods", address: "200 Oak Ave", query: "200 Oak Ave" }
     ];
     render(
-      <StoreInputForm
+      <RouteBuilderPanel
         onSubmit={onSubmit}
         savedPlaces={savedPlaces}
       />
@@ -187,7 +212,7 @@ describe("StoreInputForm", () => {
     const onSubmit = vi.fn();
     const onSaveLocationToProfile = vi.fn().mockResolvedValue({ ok: true });
     render(
-      <StoreInputForm
+      <RouteBuilderPanel
         onSubmit={onSubmit}
         onSaveLocationToProfile={onSaveLocationToProfile}
       />
@@ -212,7 +237,7 @@ describe("StoreInputForm", () => {
   });
 
   test("does not show save-to-profile without handler", () => {
-    render(<StoreInputForm onSubmit={vi.fn()} />);
+    render(<RouteBuilderPanel onSubmit={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Stop 1 store or place name"), {
       target: { value: "Petco" }
     });
@@ -225,7 +250,7 @@ describe("StoreInputForm", () => {
 
   test("shows error message when save-to-profile fails", async () => {
     const onSaveLocationToProfile = vi.fn().mockResolvedValue({ ok: false, message: "Network error" });
-    render(<StoreInputForm onSubmit={vi.fn()} onSaveLocationToProfile={onSaveLocationToProfile} />);
+    render(<RouteBuilderPanel onSubmit={vi.fn()} onSaveLocationToProfile={onSaveLocationToProfile} />);
     fireEvent.change(screen.getByLabelText("Stop 1 store or place name"), {
       target: { value: "Petco" }
     });
@@ -240,7 +265,7 @@ describe("StoreInputForm", () => {
 
   test("shows already saved hint when stop matches a saved location", () => {
     render(
-      <StoreInputForm
+      <RouteBuilderPanel
         onSubmit={vi.fn()}
         savedPlaces={[{ id: "x", label: "Petco", address: "500 Pine St", query: "500 Pine St" }]}
         onSaveLocationToProfile={vi.fn()}

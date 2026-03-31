@@ -1,15 +1,18 @@
 import { useMemo } from "react";
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip } from "react-leaflet";
-import type { LatLngExpression } from "leaflet";
+import L, { type LatLngExpression } from "leaflet";
+import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { OptimizeResponse } from "../domain/routeTypes";
 import { linePositionsForRouteIndex, routeOptionByIndex, routeOptionCount } from "../map/routeSelection";
+import { useTheme } from "../theme/ThemeContext";
 import RouteMapMarkerPopup from "./RouteMapMarkerPopup";
 
 interface Props {
   result: OptimizeResponse | null;
   /** 0 = suggested (fastest); higher indices are alternatives. */
   selectedRouteIndex: number;
+  /** Fill the planner map column instead of forcing 100vh. */
+  embedded?: boolean;
 }
 
 const markerTooltipProps = {
@@ -21,17 +24,41 @@ const markerTooltipProps = {
   className: "route-map-marker-tooltip"
 };
 
-/** Matches App.css --theme-salmon / --theme-mint / --theme-end (Leaflet SVG ignores CSS vars). */
-const ROUTE_LINE = { color: "#d97a62", weight: 6, opacity: 0.95, lineCap: "round" as const, lineJoin: "round" as const };
-const PIN_ORIGIN = { color: "#FEA993", fillColor: "#ffffff", weight: 3 };
-const PIN_STOP = { color: "#4cbf9f", fillColor: "#ffffff", weight: 2.5 };
-const PIN_END = { color: "#6366f1", fillColor: "#ffffff", weight: 3 };
+const ROUTE_LINE_LIGHT = { color: "#d97a62", weight: 6, opacity: 0.95, lineCap: "round" as const, lineJoin: "round" as const };
+const ROUTE_LINE_DARK = { color: "#7dd3fc", weight: 6, opacity: 0.92, lineCap: "round" as const, lineJoin: "round" as const };
+const ROUTE_LINE_DARK_PLANNER = { color: "#7dd3fc", weight: 5, opacity: 0.96, lineCap: "round" as const, lineJoin: "round" as const };
+const ROUTE_GLOW_DARK_PLANNER = { color: "#38bdf8", weight: 14, opacity: 0.22, lineCap: "round" as const, lineJoin: "round" as const };
+
+const PLANNER_ORIGIN_ICON = L.divIcon({
+  className: "route-planner-leaflet-icon route-planner-leaflet-icon--origin",
+  html: '<span class="route-planner-pin-origin" aria-hidden="true">⌂</span>',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
+
+const PLANNER_STOP_ICONS = Array.from({ length: 10 }, (_, i) =>
+  L.divIcon({
+    className: "route-planner-leaflet-icon route-planner-leaflet-icon--stop",
+    html: `<span class="route-planner-pin-stop">${i + 1}</span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  })
+);
+const PIN_ORIGIN_LIGHT = { color: "#FEA993", fillColor: "#ffffff", weight: 3 };
+const PIN_ORIGIN_DARK = { color: "#4cbf9f", fillColor: "#0f172a", weight: 2.5 };
+const PIN_STOP_LIGHT = { color: "#4cbf9f", fillColor: "#ffffff", weight: 2.5 };
+const PIN_STOP_DARK = { color: "#38bdf8", fillColor: "#0f172a", weight: 2.5 };
+const PIN_END_LIGHT = { color: "#6366f1", fillColor: "#ffffff", weight: 3 };
+const PIN_END_DARK = { color: "#fb923c", fillColor: "#0f172a", weight: 2.5 };
 
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions/">CARTO</a>';
-const TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const TILE_URL_LIGHT = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const TILE_URL_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 
-export default function RouteMap({ result, selectedRouteIndex }: Props) {
+export default function RouteMap({ result, selectedRouteIndex, embedded = false }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const showMap = Boolean(result);
 
   const center: LatLngExpression = useMemo(() => {
@@ -51,17 +78,30 @@ export default function RouteMap({ result, selectedRouteIndex }: Props) {
 
   const activeRoute = result ? routeOptionByIndex(result, safeRouteIndex) : null;
 
+  const routeLine = isDark ? ROUTE_LINE_DARK : ROUTE_LINE_LIGHT;
+  const pinOrigin = isDark ? PIN_ORIGIN_DARK : PIN_ORIGIN_LIGHT;
+  const pinStop = isDark ? PIN_STOP_DARK : PIN_STOP_LIGHT;
+  const pinEnd = isDark ? PIN_END_DARK : PIN_END_LIGHT;
+  const tileUrl = isDark ? TILE_URL_DARK : TILE_URL_LIGHT;
+  const plannerDecor = embedded && isDark;
+
+  const shellClass = embedded
+    ? "route-map-embed map-panel-live relative h-full w-full min-h-0 flex-1 overflow-hidden"
+    : "map-panel map-panel-live";
+
   if (!showMap) {
     return (
-      <div className="map-panel map-panel-empty" aria-label="map-view">
-        <p className="map-placeholder-text">Optimize a route to see the map.</p>
+      <div className={embedded ? "flex h-full min-h-[280px] items-center justify-center bg-hm-panel" : "map-panel map-panel-empty"} aria-label="map-view">
+        <p className={embedded ? "px-6 text-center text-[14px] font-semibold text-hm-muted" : "map-placeholder-text"}>
+          Optimize a route to see the map.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="map-panel map-panel-live" aria-label="map-view">
-      {result && routeOptionCount(result) > 0 && (
+    <div className={shellClass} aria-label="map-view">
+      {result && routeOptionCount(result) > 0 && !embedded && (
         <div className="route-map-route-badge" aria-live="polite">
           {safeRouteIndex === 0 ? (
             <>
@@ -77,6 +117,7 @@ export default function RouteMap({ result, selectedRouteIndex }: Props) {
         </div>
       )}
       <MapContainer
+        key={`${theme}-${isDark ? "d" : "l"}`}
         center={center}
         zoom={12}
         className="route-map-leaflet-mount"
@@ -85,44 +126,90 @@ export default function RouteMap({ result, selectedRouteIndex }: Props) {
       >
         <TileLayer
           attribution={TILE_ATTRIBUTION}
-          url={TILE_URL}
+          url={tileUrl}
           subdomains="abcd"
           maxZoom={19}
           maxNativeZoom={18}
         />
+        {result && positions.length >= 2 && plannerDecor && (
+          <Polyline
+            key={`route-glow-${safeRouteIndex}`}
+            positions={positions}
+            pathOptions={ROUTE_GLOW_DARK_PLANNER}
+          />
+        )}
         {result && positions.length >= 2 && (
-          <Polyline key={`route-line-${safeRouteIndex}`} positions={positions} pathOptions={ROUTE_LINE} />
+          <Polyline
+            key={`route-line-${safeRouteIndex}`}
+            positions={positions}
+            pathOptions={plannerDecor ? ROUTE_LINE_DARK_PLANNER : routeLine}
+          />
         )}
-        {result && (
-          <CircleMarker
-            center={[result.origin_lat, result.origin_lng]}
-            radius={10}
-            pathOptions={PIN_ORIGIN}
-          >
-            <Tooltip {...markerTooltipProps} offset={[0, -14]}>
-              <RouteMapMarkerPopup
-                title={result.origin_query || "Starting location"}
-                lat={result.origin_lat}
-                lng={result.origin_lng}
-                imageAlt={`Map preview near ${result.origin_query}`}
-                fields={[
-                  { label: "Address", value: result.origin_address },
-                  { label: "You entered", value: result.origin_query || "—" }
-                ]}
-              />
-            </Tooltip>
-          </CircleMarker>
-        )}
+        {result &&
+          (plannerDecor ? (
+            <Marker position={[result.origin_lat, result.origin_lng]} icon={PLANNER_ORIGIN_ICON}>
+              <Tooltip {...markerTooltipProps} offset={[0, -14]}>
+                <RouteMapMarkerPopup
+                  title={result.origin_query || "Starting location"}
+                  lat={result.origin_lat}
+                  lng={result.origin_lng}
+                  imageAlt={`Map preview near ${result.origin_query}`}
+                  fields={[
+                    { label: "Address", value: result.origin_address },
+                    { label: "You entered", value: result.origin_query || "—" }
+                  ]}
+                />
+              </Tooltip>
+            </Marker>
+          ) : (
+            <CircleMarker
+              center={[result.origin_lat, result.origin_lng]}
+              radius={10}
+              pathOptions={pinOrigin}
+            >
+              <Tooltip {...markerTooltipProps} offset={[0, -14]}>
+                <RouteMapMarkerPopup
+                  title={result.origin_query || "Starting location"}
+                  lat={result.origin_lat}
+                  lng={result.origin_lng}
+                  imageAlt={`Map preview near ${result.origin_query}`}
+                  fields={[
+                    { label: "Address", value: result.origin_address },
+                    { label: "You entered", value: result.origin_query || "—" }
+                  ]}
+                />
+              </Tooltip>
+            </CircleMarker>
+          ))}
         {result &&
           activeRoute &&
           activeRoute.ordered_stops.map((stop, i) => {
             const n = activeRoute.ordered_stops.length;
-            return (
+            return plannerDecor ? (
+              <Marker
+                key={`${stop.query}-${i}-${stop.lat}-${safeRouteIndex}`}
+                position={[stop.lat, stop.lng]}
+                icon={PLANNER_STOP_ICONS[i] ?? PLANNER_STOP_ICONS[0]}
+              >
+                <Tooltip {...markerTooltipProps}>
+                  <RouteMapMarkerPopup
+                    title={`${i + 1}. ${stop.query}`}
+                    lat={stop.lat}
+                    lng={stop.lng}
+                    imageAlt={`Map preview near ${stop.query}`}
+                    fields={[
+                      { label: "Address", value: stop.address },
+                      { label: "Stop on route", value: `${i + 1} of ${n}` }
+                    ]}
+                  />
+                </Tooltip>
+              </Marker>
+            ) : (
               <CircleMarker
                 key={`${stop.query}-${i}-${stop.lat}-${safeRouteIndex}`}
                 center={[stop.lat, stop.lng]}
                 radius={9}
-                pathOptions={PIN_STOP}
+                pathOptions={pinStop}
               >
                 <Tooltip {...markerTooltipProps}>
                   <RouteMapMarkerPopup
@@ -147,7 +234,7 @@ export default function RouteMap({ result, selectedRouteIndex }: Props) {
             <CircleMarker
               center={[result.destination_lat, result.destination_lng]}
               radius={10}
-              pathOptions={PIN_END}
+              pathOptions={pinEnd}
             >
               <Tooltip {...markerTooltipProps} offset={[0, -14]}>
                 <RouteMapMarkerPopup

@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import StopPlaceCombobox from "../components/StopPlaceCombobox";
 import type { ProfileSavedPlace } from "../domain/profileSavedPlaces";
 
@@ -11,11 +11,9 @@ const savedTarget: ProfileSavedPlace[] = [
 
 function Controlled({
   savedPlaces = NO_SAVED,
-  includeAddressSuggestions = true,
   initialValue = ""
 }: {
   savedPlaces?: ProfileSavedPlace[];
-  includeAddressSuggestions?: boolean;
   initialValue?: string;
 }) {
   const [value, setValue] = useState(initialValue);
@@ -26,7 +24,6 @@ function Controlled({
         inputId="spc-test"
         value={value}
         savedPlaces={savedPlaces}
-        includeAddressSuggestions={includeAddressSuggestions}
         ariaLabel="stop-place-test"
         onTypingChange={(n) => {
           setPicked(null);
@@ -36,10 +33,6 @@ function Controlled({
           setPicked(`saved:${loc.id}`);
           setValue(loc.label);
         }}
-        onPickAddressSuggestion={(label) => {
-          setPicked(`api:${label}`);
-          setValue(label);
-        }}
       />
       <span data-testid="pick-kind">{picked ?? ""}</span>
     </>
@@ -48,20 +41,7 @@ function Controlled({
 
 describe("StopPlaceCombobox", () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
     cleanup();
-  });
-
-  beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          suggestions: [{ label: "456 Oak Ave, Springfield, USA", lat: 39.8, lng: -89.6 }]
-        })
-      })
-    );
   });
 
   test("focus lists saved places and applies saved pick", async () => {
@@ -74,37 +54,60 @@ describe("StopPlaceCombobox", () => {
     expect(screen.getByTestId("pick-kind").textContent).toBe("saved:t1");
   });
 
-  test("API suggestions when includeAddressSuggestions and no saved rows", async () => {
-    render(<Controlled />);
-    const input = screen.getByLabelText("stop-place-test");
-    fireEvent.focus(input);
-    fireEvent.change(input, { target: { value: "456 oak" } });
-    await waitFor(() => expect(screen.getByRole("listbox")).toBeTruthy(), { timeout: 2500 });
-    fireEvent.mouseDown(screen.getByText(/456 Oak Ave, Springfield/i));
-    expect(screen.getByTestId("pick-kind").textContent).toBe("api:456 Oak Ave, Springfield, USA");
-  });
-
-  test("saved and API rows show section divider when both exist", async () => {
-    const office: ProfileSavedPlace[] = [
-      { id: "o1", label: "Office", address: "456 Oak Street, Town, USA", query: "456 Oak Street, Town, USA" }
-    ];
-    render(<Controlled savedPlaces={office} />);
-    const input = screen.getByLabelText("stop-place-test");
-    fireEvent.change(input, { target: { value: "456 oak" } });
-    fireEvent.focus(input);
-    await waitFor(() => expect(screen.getAllByRole("option").length).toBeGreaterThanOrEqual(2), { timeout: 2500 });
-    expect(document.querySelector(".address-autocomplete-item-section-start")).toBeTruthy();
-  });
-
-  test("skips API fetch when includeAddressSuggestions is false", async () => {
-    render(<Controlled savedPlaces={savedTarget} includeAddressSuggestions={false} />);
-    vi.mocked(fetch).mockClear();
+  test("Escape closes the list", async () => {
+    render(<Controlled savedPlaces={savedTarget} />);
     const input = screen.getByLabelText("stop-place-test");
     fireEvent.focus(input);
     await screen.findByRole("listbox");
-    expect(screen.getAllByRole("option")).toHaveLength(1);
-    fireEvent.change(input, { target: { value: "some long typed query zzz" } });
-    await waitFor(() => new Promise((r) => setTimeout(r, 400)));
-    expect(fetch).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("no list when no saved places match filter", async () => {
+    render(<Controlled savedPlaces={savedTarget} />);
+    const input = screen.getByLabelText("stop-place-test");
+    fireEvent.change(input, { target: { value: "zzz nonmatching" } });
+    fireEvent.focus(input);
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("Enter selects highlighted saved row", async () => {
+    render(<Controlled savedPlaces={savedTarget} />);
+    const input = screen.getByLabelText("stop-place-test");
+    fireEvent.focus(input);
+    await screen.findByRole("listbox");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect((input as HTMLInputElement).value).toBe("Target");
+    expect(screen.getByTestId("pick-kind").textContent).toBe("saved:t1");
+  });
+
+  test("ArrowDown then Enter selects second saved row", async () => {
+    const two: ProfileSavedPlace[] = [
+      { id: "a", label: "Alpha", address: "1 St", query: "1" },
+      { id: "b", label: "Beta", address: "2 St", query: "2" }
+    ];
+    render(<Controlled savedPlaces={two} />);
+    const input = screen.getByLabelText("stop-place-test");
+    fireEvent.focus(input);
+    await screen.findByRole("listbox");
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect((input as HTMLInputElement).value).toBe("Beta");
+    expect(screen.getByTestId("pick-kind").textContent).toBe("saved:b");
+  });
+
+  test("ArrowUp wraps from first row to last", async () => {
+    const two: ProfileSavedPlace[] = [
+      { id: "a", label: "Alpha", address: "1 St", query: "1" },
+      { id: "b", label: "Beta", address: "2 St", query: "2" }
+    ];
+    render(<Controlled savedPlaces={two} />);
+    const input = screen.getByLabelText("stop-place-test");
+    fireEvent.focus(input);
+    await screen.findByRole("listbox");
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect((input as HTMLInputElement).value).toBe("Beta");
+    expect(screen.getByTestId("pick-kind").textContent).toBe("saved:b");
   });
 });

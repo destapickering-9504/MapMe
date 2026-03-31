@@ -2,14 +2,27 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
+import RequireAuth from "./auth/RequireAuth";
 import AppLayout from "./AppLayout";
+import AppRouteShell from "./components/AppRouteShell";
 import DocumentTheme from "./components/DocumentTheme";
 import AuthFlowPage from "./pages/AuthFlowPage";
+import FeedbackPage from "./pages/FeedbackPage";
+import HelpPage from "./pages/HelpPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RouteHistoryPage from "./pages/RouteHistoryPage";
 import RouteOptimizerPage from "./pages/RouteOptimizerPage";
-import { PROFILE_PATH, RESET_PASSWORD_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "./routes/paths";
+import {
+  FEEDBACK_PATH,
+  HELP_PATH,
+  PRIVACY_PATH,
+  PROFILE_PATH,
+  RESET_PASSWORD_PATH,
+  ROUTE_HISTORY_PATH,
+  ROUTE_OPTIMIZER_PATH
+} from "./routes/paths";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -17,16 +30,23 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <DocumentTheme />
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<AuthFlowPage />} />
-          <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
-          <Route path="/sign-in" element={<Navigate to="/" replace />} />
-          <Route path="/sign-up" element={<Navigate to="/" replace />} />
-          <Route element={<AppLayout />}>
-            <Route path={ROUTE_OPTIMIZER_PATH} element={<RouteOptimizerPage />} />
-            <Route path={PROFILE_PATH} element={<ProfilePage />} />
-            <Route path={ROUTE_HISTORY_PATH} element={<RouteHistoryPage />} />
+          <Route element={<AppRouteShell />}>
+            <Route path="/" element={<AuthFlowPage />} />
+            <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
+            <Route path="/sign-in" element={<Navigate to="/" replace />} />
+            <Route path="/sign-up" element={<Navigate to="/" replace />} />
+            <Route element={<AppLayout />}>
+              <Route path={ROUTE_OPTIMIZER_PATH} element={<RouteOptimizerPage />} />
+              <Route path={FEEDBACK_PATH} element={<FeedbackPage />} />
+              <Route path={HELP_PATH} element={<HelpPage />} />
+              <Route path={PRIVACY_PATH} element={<PrivacyPage />} />
+              <Route element={<RequireAuth />}>
+                <Route path={PROFILE_PATH} element={<ProfilePage />} />
+                <Route path={ROUTE_HISTORY_PATH} element={<RouteHistoryPage />} />
+              </Route>
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

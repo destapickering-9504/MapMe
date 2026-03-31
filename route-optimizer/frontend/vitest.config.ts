@@ -13,10 +13,12 @@ export default defineConfig({
         "src/main.tsx",
         "src/App.tsx",
         "src/domain/**",
-        "src/pages/AuthFlowPage.tsx",
-        "src/pages/ProfilePage.tsx",
-        "src/pages/RouteHistoryPage.tsx",
-        "src/pages/RouteOptimizerPage.tsx",
+        "src/pages/**",
+        "src/components/route-planner/**",
+        "src/components/ChangePasswordModal.tsx",
+        "src/components/DeleteSavedPlaceConfirmModal.tsx",
+        "src/components/ProfileHeroMediaModals.tsx",
+        "src/components/AppSidebar.tsx",
         "dist/**"
       ],
       thresholds: {

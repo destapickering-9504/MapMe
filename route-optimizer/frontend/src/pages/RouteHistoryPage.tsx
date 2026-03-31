@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { PlannerRefSidebar } from "../components/PlannerRefSidebar";
 import {
   deleteSavedTrip,
   listSavedTripsPage,
@@ -10,14 +9,13 @@ import {
 } from "../api/savedTripsClient";
 import { useAuth } from "../auth/AuthContext";
 import type { OptimizeResponse } from "../domain/routeTypes";
-import { PROFILE_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
 import { RESTORE_TRIP_STATE_KEY } from "./RouteOptimizerPage";
 import { DeleteRouteConfirmModal } from "./history/DeleteRouteConfirmModal";
 import { HistoryHeader } from "./history/HistoryHeader";
 import { rowToViewModel } from "./history/historyMappers";
 import "./history/history.tailwind.css";
 import "./history/historyRef.css";
-import { mockListSavedTripsPage } from "./history/mockData";
 import { RouteCard, RouteCardSkeleton } from "./history/RouteCard";
 import { SearchAndFilterBar } from "./history/SearchAndFilterBar";
 import { historyRoutesSectionMeta } from "./history/historySectionTitle";
@@ -25,9 +23,6 @@ import { SectionHeader } from "./history/SectionHeader";
 import type { HistoryRouteViewModel, RouteTransportMode } from "./history/types";
 
 const PAGE_SIZE = 5;
-
-/** Set true to preview the card UI with bundled mock rows (no API). */
-const USE_HISTORY_MOCK = false;
 
 export default function RouteHistoryPage() {
   const navigate = useNavigate();
@@ -64,22 +59,6 @@ export default function RouteHistoryPage() {
 
   useEffect(() => {
     let cancelled = false;
-    if (USE_HISTORY_MOCK) {
-      setLoading(true);
-      const res = mockListSavedTripsPage({
-        limit: PAGE_SIZE,
-        offset: 0,
-        ...listQuery
-      });
-      if (!cancelled) {
-        setRows(res.rows);
-        setTotalCount(res.totalCount);
-        setLoading(false);
-      }
-      return () => {
-        cancelled = true;
-      };
-    }
     if (!user || !configured) {
       setRows([]);
       setTotalCount(0);
@@ -111,15 +90,9 @@ export default function RouteHistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, configured, listQuery, USE_HISTORY_MOCK]);
+  }, [user, configured, listQuery]);
 
   const reloadFirstPage = useCallback(async () => {
-    if (USE_HISTORY_MOCK) {
-      const res = mockListSavedTripsPage({ limit: PAGE_SIZE, offset: 0, ...listQuery });
-      setRows(res.rows);
-      setTotalCount(res.totalCount);
-      return;
-    }
     if (!user || !configured) return;
     setError(null);
     try {
@@ -129,22 +102,10 @@ export default function RouteHistoryPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load history");
     }
-  }, [user, configured, listQuery, USE_HISTORY_MOCK]);
+  }, [user, configured, listQuery]);
 
   const loadMore = useCallback(async () => {
     if (rows.length >= totalCount || loadingMore) return;
-    if (USE_HISTORY_MOCK) {
-      setLoadingMore(true);
-      const res = mockListSavedTripsPage({
-        limit: PAGE_SIZE,
-        offset: rows.length,
-        ...listQuery
-      });
-      setRows((prev) => [...prev, ...res.rows]);
-      setTotalCount(res.totalCount);
-      setLoadingMore(false);
-      return;
-    }
     if (!user || !configured) return;
     setLoadingMore(true);
     setError(null);
@@ -161,7 +122,7 @@ export default function RouteHistoryPage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [rows.length, totalCount, loadingMore, user, configured, listQuery, USE_HISTORY_MOCK]);
+  }, [rows.length, totalCount, loadingMore, user, configured, listQuery]);
 
   const viewModels = useMemo(() => rows.map(rowToViewModel), [rows]);
 
@@ -234,7 +195,7 @@ export default function RouteHistoryPage() {
     </li>
   );
 
-  if (!configured && !USE_HISTORY_MOCK) {
+  if (!configured) {
     return (
       <main className="app-page app-page-narrow">
         <h1 className="app-page-title">History</h1>
@@ -245,7 +206,7 @@ export default function RouteHistoryPage() {
     );
   }
 
-  if (!user && !USE_HISTORY_MOCK) {
+  if (!user) {
     return (
       <main className="app-page app-page-narrow">
         <h1 className="app-page-title">History</h1>
@@ -256,7 +217,6 @@ export default function RouteHistoryPage() {
     );
   }
 
-  const showShell = USE_HISTORY_MOCK || (configured && Boolean(user));
   const hasActiveFilters = Boolean(
     debouncedSearch.trim() || filterSavedOnly || routeTypeFilter
   );
@@ -265,114 +225,99 @@ export default function RouteHistoryPage() {
   const sectionMeta = historyRoutesSectionMeta(filterSavedOnly, routeTypeFilter);
 
   return (
-    <main className="history-ref-layout-shell app-page-history-ref">
-      <div className="hm-history-root hm-ref hm-ref-page-with-sidebar">
-        <PlannerRefSidebar surface="history" />
-        <div className="hm-ref-sidebar-main">
-          <div className="hm-ref-sidebar-main-inner app-page-history-shell">
-            <div className="hm-ref-mobile-tabs" aria-label="Navigate">
-              <Link to={ROUTE_OPTIMIZER_PATH}>Planner</Link>
-              <Link to={ROUTE_HISTORY_PATH}>History</Link>
-              <Link to={PROFILE_PATH}>Profile</Link>
-            </div>
+    <main className="app-page app-page-history-ref">
+      <div className="app-page-history-shell">
+        <HistoryHeader />
 
-            <HistoryHeader />
+        {error ? (
+          <p className="status-text error-text mb-6" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-            {error ? (
-              <p className="status-text error-text mb-6" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            {showShell ? (
-              <>
-            <SearchAndFilterBar
-              searchQuery={nameFilter}
-              onSearchChange={setNameFilter}
-              filterSavedOnly={filterSavedOnly}
-              onToggleSavedOnly={() => setFilterSavedOnly((v) => !v)}
-              routeTypeFilter={routeTypeFilter}
-              onRouteTypeChange={setRouteTypeFilter}
-              sortNewestFirst={sortNewestFirst}
-              onSortNewestFirst={setSortNewestFirst}
-            />
-
-            {loading ? (
-              <ul className="hm-ref-card-list" aria-busy="true" aria-label="Loading routes">
-                <li>
-                  <RouteCardSkeleton />
-                </li>
-                <li>
-                  <RouteCardSkeleton />
-                </li>
-                <li>
-                  <RouteCardSkeleton />
-                </li>
-              </ul>
-            ) : null}
-
-            {listEmpty ? (
-              <div className="hm-ref-empty">
-                <p className="hm-ref-empty-title">No routes yet</p>
-                <p className="hm-ref-empty-text">
-                  <Link to={ROUTE_OPTIMIZER_PATH}>Plan a route</Link> — it will show up here after you optimize.
-                </p>
-              </div>
-            ) : null}
-
-            {noResults ? (
-              <div className="hm-ref-empty">
-                <p className="hm-ref-empty-title">
-                  {filterSavedOnly ? "No saved routes" : "No routes match"}
-                </p>
-                <p className="hm-ref-empty-text">
-                  {filterSavedOnly
-                    ? "Turn off Saved or clear other filters to see matching routes."
-                    : "Try clearing filters or searching with a different name or place."}
-                </p>
-              </div>
-            ) : null}
-
-            {!loading && viewModels.length > 0 ? (
-              <section aria-labelledby={sectionMeta.id}>
-                <SectionHeader id={sectionMeta.id} title={sectionMeta.title} count={totalCount} />
-                <ul className="hm-ref-card-list">
-                  {viewModels.map((r) => renderCard(r))}
-                </ul>
-                {totalCount > PAGE_SIZE || rows.length < totalCount ? (
-                  <div className="hm-ref-load-wrap">
-                    <p className="hm-ref-muted-caption">
-                      Showing {rows.length} of {totalCount}
-                    </p>
-                    {rows.length < totalCount ? (
-                      <button
-                        type="button"
-                        className="hm-ref-btn-load"
-                        disabled={loadingMore}
-                        onClick={() => void loadMore()}
-                      >
-                        {loadingMore ? "Loading…" : "Load more"}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        <DeleteRouteConfirmModal
-          open={deleteConfirm !== null}
-          routeTitle={deleteConfirm?.title ?? ""}
-          busy={deleteBusy}
-          onCancel={() => {
-            if (!deleteBusy) setDeleteConfirm(null);
-          }}
-          onConfirm={() => void confirmDeleteRoute()}
+        <SearchAndFilterBar
+          searchQuery={nameFilter}
+          onSearchChange={setNameFilter}
+          filterSavedOnly={filterSavedOnly}
+          onToggleSavedOnly={() => setFilterSavedOnly((v) => !v)}
+          routeTypeFilter={routeTypeFilter}
+          onRouteTypeChange={setRouteTypeFilter}
+          sortNewestFirst={sortNewestFirst}
+          onSortNewestFirst={setSortNewestFirst}
         />
+
+        {loading ? (
+          <ul className="hm-ref-card-list" aria-busy="true" aria-label="Loading routes">
+            <li>
+              <RouteCardSkeleton />
+            </li>
+            <li>
+              <RouteCardSkeleton />
+            </li>
+            <li>
+              <RouteCardSkeleton />
+            </li>
+          </ul>
+        ) : null}
+
+        {listEmpty ? (
+          <div className="hm-ref-empty">
+            <p className="hm-ref-empty-title">No routes yet</p>
+            <p className="hm-ref-empty-text">
+              <Link to={ROUTE_OPTIMIZER_PATH}>Plan a route</Link> — it will show up here after you optimize.
+            </p>
+          </div>
+        ) : null}
+
+        {noResults ? (
+          <div className="hm-ref-empty">
+            <p className="hm-ref-empty-title">
+              {filterSavedOnly ? "No saved routes" : "No routes match"}
+            </p>
+            <p className="hm-ref-empty-text">
+              {filterSavedOnly
+                ? "Turn off Saved or clear other filters to see matching routes."
+                : "Try clearing filters or searching with a different name or place."}
+            </p>
+          </div>
+        ) : null}
+
+        {!loading && viewModels.length > 0 ? (
+          <section aria-labelledby={sectionMeta.id}>
+            <SectionHeader id={sectionMeta.id} title={sectionMeta.title} count={totalCount} />
+            <ul className="hm-ref-card-list">
+              {viewModels.map((r) => renderCard(r))}
+            </ul>
+            {totalCount > PAGE_SIZE || rows.length < totalCount ? (
+              <div className="hm-ref-load-wrap">
+                <p className="hm-ref-muted-caption">
+                  Showing {rows.length} of {totalCount}
+                </p>
+                {rows.length < totalCount ? (
+                  <button
+                    type="button"
+                    className="hm-ref-btn-load"
+                    disabled={loadingMore}
+                    onClick={() => void loadMore()}
+                  >
+                    {loadingMore ? "Loading…" : "Load more"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </div>
+
+      <DeleteRouteConfirmModal
+        open={deleteConfirm !== null}
+        routeTitle={deleteConfirm?.title ?? ""}
+        busy={deleteBusy}
+        onCancel={() => {
+          if (!deleteBusy) setDeleteConfirm(null);
+        }}
+        onConfirm={() => void confirmDeleteRoute()}
+      />
     </main>
   );
 }

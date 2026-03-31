@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { insertSavedTrip } from "../api/savedTripsClient";
-import RouteMap from "../components/RouteMap";
-import RouteResultsPanel from "../components/RouteResultsPanel";
 import SavedTripsPanel from "../components/SavedTripsPanel";
-import StoreInputForm, { type SaveLocationToProfileResult } from "../components/StoreInputForm";
+import "../components/route-planner/plannerRef.css";
+import RouteBuilderPanel, { type SaveLocationToProfileResult } from "../components/route-planner/RouteBuilderPanel";
+import MapCanvas from "../components/route-planner/MapCanvas";
+import RouteSummaryCard from "../components/route-planner/RouteSummaryCard";
 import type { OptimizeRequest, OptimizeResponse } from "../domain/routeTypes";
 import {
   createProfileSavedPlaceId,
@@ -16,6 +17,8 @@ import { computeStartLocationQuery } from "../domain/savedStartLocations";
 import { useOptimizeRoute } from "../hooks/useOptimizeRoute";
 import { supabase } from "../lib/supabaseClient";
 import { ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+import "./history/historyRef.css";
+import "./planner/planner.tailwind.css";
 
 function historyTitleForPayload(data: OptimizeResponse): string {
   const when = new Date().toLocaleString(undefined, {
@@ -52,7 +55,6 @@ export default function RouteOptimizerPage() {
 
   const { result, loading, error, run, applySavedResult } = useOptimizeRoute({ onOptimized });
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
-
   useEffect(() => {
     setSelectedRouteIndex(0);
   }, [result]);
@@ -102,35 +104,60 @@ export default function RouteOptimizerPage() {
     [user]
   );
 
-  return (
-    <main className="app-shell">
-      <aside className="left-panel">
-        <section className="brand-card">
-          <h1>Route Optimizer</h1>
-        </section>
-
-        <div className="tab-panel">
-          <StoreInputForm
-            onSubmit={handleOptimize}
-            savedPlaces={savedPlaces}
-            onSaveLocationToProfile={user && configured && supabase ? saveLocationToProfile : undefined}
-          />
-          {loading && <p className="status-text">Optimizing...</p>}
-          {error && (
-            <p className="status-text error-text" role="alert">
-              {error}
-            </p>
-          )}
-          <RouteResultsPanel
-            result={result}
-            selectedRouteIndex={selectedRouteIndex}
-            onSelectRoute={setSelectedRouteIndex}
-          />
-          <SavedTripsPanel currentResult={result} onLoadTrip={applySavedResult} />
+  const mainColumn = (
+    <div className="hm-ref-planner-workspace relative min-h-0 w-full min-w-0 flex-1">
+        {/* Route builder — desktop: floating card over map */}
+        <div className="hm-ref-planner-builder-wrap">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5 lg:pr-1">
+            <RouteBuilderPanel
+              onSubmit={handleOptimize}
+              savedPlaces={savedPlaces}
+              onSaveLocationToProfile={user && configured && supabase ? saveLocationToProfile : undefined}
+              optimizeLoading={loading}
+            />
+            {error ? (
+              <p
+                className="mt-3 rounded-xl border border-red-500/35 bg-red-500/10 px-3 py-2 text-[13px] font-semibold text-red-200"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
+            <details className="group hm-ref-planner-saved-details">
+              <summary className="hm-ref-planner-saved-summary marker:content-none">
+                <span className="hm-ref-planner-saved-summary-text">
+                  Saved trips
+                  <span className="hm-ref-planner-saved-chevron" aria-hidden>
+                    ▾
+                  </span>
+                </span>
+              </summary>
+              <div className="mt-3">
+                <SavedTripsPanel currentResult={result} onLoadTrip={applySavedResult} />
+              </div>
+            </details>
+          </div>
         </div>
-      </aside>
 
-      <RouteMap result={result} selectedRouteIndex={selectedRouteIndex} />
-    </main>
+        {/* Map + summary */}
+        <div className="hm-ref-planner-map-column">
+          <div className="relative flex min-h-[min(360px,45dvh)] flex-1 lg:min-h-0">
+            <MapCanvas result={result} selectedRouteIndex={selectedRouteIndex} />
+            {result ? (
+              <div className="pointer-events-none absolute right-3 top-3 z-[1100] max-w-[calc(100%-1.5rem)] sm:right-5 sm:top-5">
+                <RouteSummaryCard
+                  result={result}
+                  selectedRouteIndex={selectedRouteIndex}
+                  onSelectRoute={setSelectedRouteIndex}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+  );
+
+  return (
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{mainColumn}</div>
   );
 }

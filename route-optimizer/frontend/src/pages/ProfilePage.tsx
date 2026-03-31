@@ -29,8 +29,7 @@ import {
 import { computeStartLocationQuery } from "../domain/savedStartLocations";
 import { TRAVEL_MODE_UI, travelModeUiById } from "../domain/travelModesUi";
 import { supabase } from "../lib/supabaseClient";
-import { PlannerRefSidebar } from "../components/PlannerRefSidebar";
-import { PROFILE_PATH, ROUTE_HISTORY_PATH, ROUTE_OPTIMIZER_PATH } from "../routes/paths";
+import "./history/historyRef.css";
 import { useTheme } from "../theme/ThemeContext";
 
 const AVATAR_BUCKET = import.meta.env.VITE_AVATAR_BUCKET ?? "avatars";
@@ -609,15 +608,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="profile-layout-shell">
-      <PlannerRefSidebar surface="profile" />
-      <div className="profile-ref-main">
-        <div className="profile-ref-main-inner">
-          <div className="profile-ref-mobile-tabs" aria-label="Navigate">
-            <Link to={ROUTE_OPTIMIZER_PATH}>Planner</Link>
-            <Link to={ROUTE_HISTORY_PATH}>History</Link>
-          </div>
-
+    <main className="profile-ref-main app-page">
+      <div className="profile-ref-main-inner">
           {error ? (
             <p className="status-text error-text" role="alert">
               {error}
@@ -668,27 +660,29 @@ export default function ProfilePage() {
             </div>
             <div className="profile-ref-hero-body">
               <div className="profile-ref-hero-text">
-                <div className="profile-ref-name-row">
-                  <h1 id="profile-hero-name" className="profile-ref-hero-name">
-                    {displayName}
-                  </h1>
-                  {emailVerified ? (
-                    <span
-                      className="profile-ref-verified"
-                      title="Your email is confirmed. We can use it for sign-in, password reset, and important account messages."
-                    >
-                      <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                        <path
-                          fillRule="evenodd"
-                          d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Verified
-                    </span>
-                  ) : null}
+                <div className="profile-ref-hero-identity-row">
+                  <div className="profile-ref-name-row">
+                    <h1 id="profile-hero-name" className="profile-ref-hero-name">
+                      {displayName}
+                    </h1>
+                    {emailVerified ? (
+                      <span
+                        className="profile-ref-verified"
+                        title="Your email is confirmed. We can use it for sign-in, password reset, and important account messages."
+                      >
+                        <svg width={12} height={12} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path
+                            fillRule="evenodd"
+                            d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Verified
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="profile-ref-hero-email">{user.email ?? "No email on file"}</p>
                 </div>
-                <p className="profile-ref-hero-email">{user.email ?? "No email on file"}</p>
                 {user.email && !emailVerified ? (
                   <p className="profile-ref-unverified-note">
                     This email isn&apos;t confirmed yet. Open the link in the message Map Me sent you, or request a new one
@@ -1004,7 +998,6 @@ export default function ProfilePage() {
             <ProfileAppearanceSettings profileGridStack />
           </div>
         </div>
-      </div>
 
       {user.email ? (
         <ChangePasswordModal

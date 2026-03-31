@@ -78,6 +78,87 @@ describe("savedTripsClient", () => {
     await expect(listSavedTripsPage()).rejects.toThrow("nope");
   });
 
+  test("listSavedTripsPage parses JSON string payload from rpc", async () => {
+    const row = {
+      id: "r1",
+      user_id: "u1",
+      title: null,
+      payload: { trip_mode: "one_way" },
+      created_at: "2024-01-01T00:00:00Z",
+      is_favorite: false
+    };
+    const json = JSON.stringify({ total_count: 3, rows: [row] });
+    rpcMock.mockResolvedValueOnce({ data: json, error: null });
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    const out = await listSavedTripsPage();
+    expect(out.totalCount).toBe(3);
+    expect(out.rows).toHaveLength(1);
+    expect(out.rows[0].id).toBe("r1");
+  });
+
+  test("listSavedTripsPage treats invalid JSON string as empty page", async () => {
+    rpcMock.mockResolvedValueOnce({ data: "{not json", error: null });
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    const out = await listSavedTripsPage();
+    expect(out).toEqual({ rows: [], totalCount: 0 });
+  });
+
+  test("listSavedTripsPage coerces string total_count and drops non-array rows", async () => {
+    rpcMock.mockResolvedValueOnce({
+      data: { total_count: "12", rows: "nope" },
+      error: null
+    });
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    const out = await listSavedTripsPage();
+    expect(out.totalCount).toBe(12);
+    expect(out.rows).toEqual([]);
+  });
+
+  test("listSavedTripsPage passes null search when blank", async () => {
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    await listSavedTripsPage({ search: "   " });
+    expect(rpcMock).toHaveBeenCalledWith(
+      "list_saved_trips_page",
+      expect.objectContaining({ p_search: null })
+    );
+  });
+
+  test("listSavedTripsPage passes transport mode to rpc", async () => {
+    const { listSavedTripsPage } = await import("../api/savedTripsClient");
+    await listSavedTripsPage({ transportMode: "transit", newestFirst: false });
+    expect(rpcMock).toHaveBeenCalledWith(
+      "list_saved_trips_page",
+      expect.objectContaining({
+        p_transport_mode: "transit",
+        p_newest_first: false
+      })
+    );
+  });
+
+  test("insertSavedTrip rejects when getUser returns error", async () => {
+    getUserMock.mockResolvedValueOnce({ data: { user: { id: "x" } }, error: { message: "auth" } });
+    const { insertSavedTrip } = await import("../api/savedTripsClient");
+    const payload = {
+      trip_mode: "round_trip" as const,
+      origin_query: "94102",
+      origin_address: "x",
+      origin_lat: 1,
+      origin_lng: 2,
+      stops_resolved: [],
+      permutations_considered: 1,
+      best_route: {
+        ordered_stores: ["A"],
+        ordered_stops: [{ query: "A", address: "a", lat: 1, lng: 2 }],
+        total_minutes: 10
+      },
+      alternatives: [],
+      explanation: "",
+      travel_time_note: "",
+      best_route_geojson: null
+    };
+    await expect(insertSavedTrip(payload)).rejects.toThrow(/signed in/i);
+  });
+
   test("insertSavedTrip requires user", async () => {
     getUserMock.mockResolvedValueOnce({ data: { user: null }, error: null });
     const { insertSavedTrip } = await import("../api/savedTripsClient");
@@ -131,6 +212,32 @@ describe("savedTripsClient", () => {
     });
   });
 
+  test("insertSavedTrip default title uses origin when title omitted", async () => {
+    const { insertSavedTrip } = await import("../api/savedTripsClient");
+    const payload = {
+      trip_mode: "round_trip" as const,
+      origin_query: "Oakland",
+      origin_address: "x",
+      origin_lat: 1,
+      origin_lng: 2,
+      stops_resolved: [],
+      permutations_considered: 1,
+      best_route: {
+        ordered_stores: ["A"],
+        ordered_stops: [{ query: "A", address: "a", lat: 1, lng: 2 }],
+        total_minutes: 10
+      },
+      alternatives: [],
+      explanation: "",
+      travel_time_note: "",
+      best_route_geojson: null
+    };
+    await insertSavedTrip(payload);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Trip · Oakland" })
+    );
+  });
+
   test("deleteSavedTrip calls delete with id", async () => {
     const { deleteSavedTrip } = await import("../api/savedTripsClient");
     await deleteSavedTrip("abc");
@@ -173,6 +280,12 @@ describe("savedTripsClient", () => {
     await updateSavedTrip("row-1", "Sunday shopping");
     expect(updateMock).toHaveBeenCalledWith({ title: "Sunday shopping" });
     expect(updateEqMock).toHaveBeenCalledWith("id", "row-1");
+  });
+
+  test("updateSavedTrip sends null title when only whitespace", async () => {
+    const { updateSavedTrip } = await import("../api/savedTripsClient");
+    await updateSavedTrip("row-1", "  \t ");
+    expect(updateMock).toHaveBeenCalledWith({ title: null });
   });
 
   test("updateSavedTrip throws on error", async () => {

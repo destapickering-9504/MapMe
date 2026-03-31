@@ -1,6 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   important: ".hm-history-root",
+  /** Match Map Me `document.documentElement.dataset.theme` (not prefers-color-scheme). */
+  darkMode: ["selector", '[data-theme="dark"]'],
   corePlugins: {
     preflight: false
   },

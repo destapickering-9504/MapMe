@@ -79,9 +79,9 @@ describe("App", () => {
     );
   }
 
-  test("renders heading", () => {
+  test("renders planner heading", () => {
     renderApp();
-    expect(screen.getByRole("heading", { name: /Route Optimizer/i })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /Plan your route/i })).toBeTruthy();
   });
 
   test("runs optimization and renders result", async () => {
@@ -96,6 +96,6 @@ describe("App", () => {
       target: { value: "Whole Foods" }
     });
     fireEvent.click(screen.getAllByText("Optimize Route")[0]);
-    await waitFor(() => expect(screen.getByText("Pick a route")).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText("Route summary")).toBeTruthy());
   });
 });

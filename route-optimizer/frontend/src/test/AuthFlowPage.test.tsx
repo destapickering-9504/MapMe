@@ -22,19 +22,20 @@ function renderAuthFlow() {
 describe("AuthFlowPage", () => {
   afterEach(() => cleanup());
 
-  test("step 1 shows split layout, email flow, and guest link", () => {
+  test("step 1 shows split layout, sign-in form, and guest link", () => {
     renderAuthFlow();
     expect(screen.getByRole("heading", { name: /sign in or create your account/i })).toBeTruthy();
     expect(screen.getByLabelText(/email address/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /continue/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeTruthy();
     expect(screen.getByRole("link", { name: /continue as guest/i }).getAttribute("href")).toBe("/routeoptimizer");
     expect(screen.getByRole("img", { name: /^MapMe$/i })).toBeTruthy();
   });
 
-  test("password tab shows password field and sign in", () => {
+  test("sign up tab shows password fields and create account", () => {
     renderAuthFlow();
-    fireEvent.click(screen.getByRole("tab", { name: /^password$/i }));
-    expect(screen.getByPlaceholderText(/your password/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /^sign up$/i }));
+    expect(screen.getByPlaceholderText(/at least/i)).toBeTruthy();
+    expect(screen.getByPlaceholderText(/same as above/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /create account/i })).toBeTruthy();
   });
 });

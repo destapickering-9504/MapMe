@@ -698,11 +698,13 @@
   min-height: 0;
   width: 100%;
   align-items: stretch;
+  overflow: hidden;
 }
 
 .hm-ref-sidebar-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   overflow: auto;
   background: var(--ref-page);
 }
@@ -725,6 +727,10 @@
   flex-direction: column;
   width: 220px;
   flex-shrink: 0;
+  align-self: stretch;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-right: 1px solid var(--ref-line);
   background: linear-gradient(180deg, #10141c 0%, #0a0d12 100%);
   padding: 24px 10px 32px;
@@ -742,19 +748,69 @@
 }
 
 .hm-ref-sidebar-brand {
-  padding: 0 12px 22px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--ref-title);
-  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 22px;
+  padding: 4px 0;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  outline: none;
+  transition: background 0.15s ease;
 }
 
-.hm-ref-sidebar-brand-tag {
+.hm-ref-sidebar-brand:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="light"] .hm-ref-sidebar-brand:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.hm-ref-sidebar-brand:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ref-sage) 55%, transparent);
+}
+
+.hm-ref-sidebar-planner-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ref-sage);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ref-sage) 35%, transparent);
+}
+
+.hm-ref-sidebar-link--active .hm-ref-sidebar-planner-dot {
+  background: #bef264;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ref-sage) 40%, transparent),
+    0 0 12px color-mix(in srgb, var(--ref-sage) 55%, transparent);
+}
+
+/* PNG wordmark in app sidebar (replaces pin + text) */
+.hm-ref-sidebar-wordmark.mapme-logo-themed {
+  flex: none;
+  box-sizing: border-box;
+  width: calc(100% - 10px);
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+}
+
+.hm-ref-sidebar-wordmark.mapme-logo-themed img.mapme-logo-themed__img {
   display: block;
-  margin-top: 2px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ref-meta);
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
 }
 
 .hm-ref-sidebar-nav {
@@ -787,6 +843,66 @@
   color: var(--ref-title);
   background: color-mix(in srgb, var(--ref-sage) 16%, rgba(255, 255, 255, 0.04));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ref-sage) 28%, transparent);
+}
+
+.hm-ref-sidebar-link--locked {
+  position: relative;
+  cursor: not-allowed;
+  color: color-mix(in srgb, var(--ref-meta) 75%, var(--ref-path));
+  opacity: 0.72;
+}
+
+.hm-ref-sidebar-link--locked:hover,
+.hm-ref-sidebar-link--locked:focus-visible {
+  z-index: 5;
+  color: color-mix(in srgb, var(--ref-meta) 55%, var(--ref-path));
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0.88;
+}
+
+:root[data-theme="light"] .hm-ref-sidebar-link--locked:hover,
+:root[data-theme="light"] .hm-ref-sidebar-link--locked:focus-visible {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.hm-ref-sidebar-lock-icon {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.hm-ref-locked-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  color: var(--ref-title);
+  background: color-mix(in srgb, var(--ref-card-a) 92%, #0f172a);
+  border: 1px solid var(--ref-line);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    visibility 0.12s ease;
+  z-index: 30;
+}
+
+:root[data-theme="light"] .hm-ref-locked-tooltip {
+  background: var(--theme-bg-card);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+}
+
+.hm-ref-sidebar-link--locked:hover .hm-ref-locked-tooltip,
+.hm-ref-sidebar-link--locked:focus-visible .hm-ref-locked-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .hm-ref-sidebar-icon {
@@ -823,6 +939,235 @@
 .hm-ref-mobile-tabs a:hover {
   border-color: color-mix(in srgb, var(--ref-sage) 45%, var(--ref-line));
   color: var(--ref-title);
+}
+
+.hm-ref-mobile-tab-locked {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ref-line);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ref-meta);
+  cursor: not-allowed;
+  opacity: 0.88;
+  background: color-mix(in srgb, var(--ref-card-a) 55%, transparent);
+  outline: none;
+}
+
+.hm-ref-mobile-tab-locked:hover,
+.hm-ref-mobile-tab-locked:focus-visible {
+  z-index: 8;
+  border-color: color-mix(in srgb, var(--ref-sage) 28%, var(--ref-line));
+  color: var(--ref-path);
+}
+
+.hm-ref-mobile-tab-lock {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.hm-ref-mobile-tab-locked:hover .hm-ref-locked-tooltip--mobile,
+.hm-ref-mobile-tab-locked:focus-visible .hm-ref-locked-tooltip--mobile {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hm-ref-locked-tooltip--mobile {
+  bottom: calc(100% + 6px);
+}
+
+/* AppSidebar: stack brand, nav, bottom (user / sign in + theme) */
+.hm-ref-sidebar.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.app-sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.app-sidebar-bottom {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ref-line);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.app-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-sidebar-user-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--ref-line);
+}
+
+.app-sidebar-user-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ref-meta) 22%, transparent);
+  flex-shrink: 0;
+}
+
+.app-sidebar-user-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-sidebar-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ref-title);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar-user-note {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ref-meta);
+  line-height: 1.25;
+}
+
+.app-sidebar-sign-out {
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ref-meta);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-sidebar-sign-out:hover {
+  color: var(--ref-path);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="light"] .app-sidebar-sign-out:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.app-sidebar-guest-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.app-sidebar-guest-hint {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--ref-meta) 88%, transparent);
+  text-align: center;
+}
+
+.app-sidebar-sign-in-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fffaf5;
+  text-decoration: none;
+  text-align: center;
+  background: linear-gradient(135deg, #ea580c 0%, #f59e0b 48%, #fbbf24 100%);
+  box-shadow:
+    0 2px 0 color-mix(in srgb, #9a3412 55%, transparent),
+    0 8px 20px rgba(234, 88, 12, 0.35);
+  transition:
+    filter 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+
+.app-sidebar-sign-in-btn:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 2px 0 color-mix(in srgb, #9a3412 55%, transparent),
+    0 10px 24px rgba(234, 88, 12, 0.42);
+}
+
+.app-sidebar-sign-in-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--ref-sage) 55%, transparent),
+    0 8px 20px rgba(234, 88, 12, 0.35);
+}
+
+.app-sidebar-guest-footnote {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--ref-meta) 80%, transparent);
+  text-align: center;
+}
+
+.app-sidebar-appearance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.app-sidebar-appearance-leading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-sidebar-appearance-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--ref-meta);
+}
+
+.app-sidebar-appearance-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ref-meta);
+}
+
+.app-sidebar-theme-switch {
+  transform: scale(0.9);
+  transform-origin: right center;
 }
 
 /* Delete confirmation modal (inherits --ref-* from .hm-history-root.hm-ref) */
@@ -901,4 +1246,200 @@
 .hm-ref-btn-delete-confirm:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+/* =============================================================================
+ * Profile (signed-in): same ref chrome as History — main was theme-only (#0c1018 /
+ * theme cards) while History uses --ref-page / --ref-card-* under this root.
+ * ============================================================================= */
+
+.hm-history-root.hm-ref .profile-ref-main {
+  background: var(--ref-page);
+}
+
+.hm-history-root.hm-ref .profile-ref-hero {
+  --profile-hero-avatar-border: var(--ref-card-b);
+  border-color: var(--ref-line);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  background: var(--ref-card-a);
+}
+
+.hm-history-root.hm-ref .profile-ref-hero-body {
+  background: var(--ref-card-b);
+}
+
+.hm-history-root.hm-ref .profile-ref-hero-name {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-hero-email,
+.hm-history-root.hm-ref .profile-ref-unverified-note {
+  color: var(--ref-meta);
+}
+
+.hm-history-root.hm-ref .profile-ref-mobile-tabs a {
+  border-color: var(--ref-line);
+  background: var(--ref-card-a);
+  color: var(--ref-path);
+}
+
+.hm-history-root.hm-ref .profile-ref-mobile-tabs a:hover {
+  color: var(--ref-title);
+  border-color: color-mix(in srgb, var(--ref-sage) 38%, var(--ref-line));
+}
+
+.hm-history-root.hm-ref .profile-ref-main .planner-card,
+.hm-history-root.hm-ref .profile-ref-main .results-card {
+  background: var(--ref-card-a);
+  border-color: var(--ref-line);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .planner-card h2,
+.hm-history-root.hm-ref .profile-ref-main .planner-card h3,
+.hm-history-root.hm-ref .profile-ref-main .planner-card label {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .planner-card p {
+  color: var(--ref-meta);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .muted-small {
+  color: var(--ref-meta);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-places-lead h2 {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-places-block-title,
+.hm-history-root.hm-ref .profile-ref-main .profile-places-compose-title {
+  color: var(--ref-path);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-saved-start-label {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-saved-start-query {
+  color: var(--ref-meta);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-travel-summary-card {
+  border-color: var(--ref-line);
+  background: var(--ref-card-b);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-travel-summary-title {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-travel-summary-sub {
+  color: var(--ref-meta);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-spot-card {
+  border-color: var(--ref-line);
+  background: var(--ref-card-a);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-place-composer {
+  border-color: var(--ref-line);
+  background: var(--ref-card-b);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-place-composer.profile-place-composer--add {
+  border-color: var(--ref-line);
+  background: color-mix(in srgb, var(--ref-card-b) 88%, transparent);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-spot-card-edit {
+  border-top-color: color-mix(in srgb, var(--ref-meta) 28%, var(--ref-line));
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-appearance-row-label {
+  color: var(--ref-path);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-theme-switch {
+  border-color: var(--ref-line);
+  background: var(--ref-card-b);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-place-menu-trigger {
+  border-color: var(--ref-line);
+  background: var(--ref-card-b);
+  color: var(--ref-path);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-place-menu-panel {
+  border-color: var(--ref-line);
+  background: var(--ref-card-a);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .profile-place-menu-item {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-label-text,
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-sub {
+  color: var(--ref-path);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-input,
+.hm-history-root.hm-ref .profile-ref-main select.auth-flow-input,
+.hm-history-root.hm-ref .profile-ref-main textarea.auth-flow-input {
+  background: var(--ref-card-b);
+  border-color: color-mix(in srgb, var(--ref-meta) 35%, var(--ref-line));
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-input:focus {
+  border-color: color-mix(in srgb, var(--ref-sage) 45%, var(--ref-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ref-sage) 22%, transparent);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-secondary {
+  background: var(--ref-card-b);
+  border-color: var(--ref-line);
+  color: var(--ref-path);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-secondary:hover {
+  border-color: color-mix(in srgb, var(--ref-meta) 40%, var(--ref-line));
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-travel-card {
+  background: var(--ref-card-b);
+  border-color: var(--ref-line);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-travel-card:hover {
+  border-color: color-mix(in srgb, var(--ref-meta) 40%, var(--ref-line));
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-travel-card-active {
+  border-color: color-mix(in srgb, var(--ref-sage) 55%, var(--ref-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ref-sage) 18%, transparent);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-travel-title {
+  color: var(--ref-title);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-travel-sub {
+  color: var(--ref-meta);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .auth-flow-travel-check {
+  color: var(--ref-sage);
+}
+
+.hm-history-root.hm-ref .profile-ref-main .input-field {
+  background: var(--ref-card-b);
+  border-color: color-mix(in srgb, var(--ref-meta) 35%, var(--ref-line));
+  color: var(--ref-title);
 }

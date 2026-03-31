@@ -1,9 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  describeEmailOtpVerifyError,
-  describePasswordSignInError,
-  normalizeAuthEmail
-} from "../lib/authEmail";
+import { describePasswordSignInError, normalizeAuthEmail } from "../lib/authEmail";
 
 describe("normalizeAuthEmail", () => {
   test("trims and lowercases", () => {
@@ -11,20 +7,13 @@ describe("normalizeAuthEmail", () => {
   });
 });
 
-describe("describeEmailOtpVerifyError", () => {
-  test("expands common OTP failure messages", () => {
-    expect(describeEmailOtpVerifyError("Token has expired or is invalid")).toContain("Resend email");
-    expect(describeEmailOtpVerifyError("otp_expired")).toContain("Resend email");
-  });
-
-  test("passes through other messages", () => {
-    expect(describeEmailOtpVerifyError("Something else")).toBe("Something else");
-  });
-});
-
 describe("describePasswordSignInError", () => {
   test("expands invalid login messages", () => {
-    expect(describePasswordSignInError("Invalid login credentials")).toContain("Email code");
+    expect(describePasswordSignInError("Invalid login credentials")).toContain("verification");
+  });
+
+  test("mentions email confirmation when applicable", () => {
+    expect(describePasswordSignInError("Email not confirmed")).toContain("Confirm your email");
   });
 
   test("passes through other messages", () => {

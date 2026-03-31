@@ -1,46 +1,32 @@
-import { useMemo } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { useLayoutEffect } from "react";
+import { Outlet } from "react-router-dom";
 import "./App.css";
-import { useAuth } from "./auth/AuthContext";
-import AppHeader from "./components/AppHeader";
-import { ThemeProvider, useTheme } from "./theme/ThemeContext";
+import "./pages/history/historyRef.css";
+import AppLayoutMobileNav from "./components/AppLayoutMobileNav";
+import AppSidebar from "./components/AppSidebar";
+import { FOOTER_SIDEBAR_INSET_PX } from "./lib/footerSidebarInset";
+import { ThemeProvider } from "./theme/ThemeContext";
 
 function AppLayoutInner() {
-  const navigate = useNavigate();
-  const { user, loading: authLoading, configured, signOut } = useAuth();
-  const { theme } = useTheme();
-
-  const displayName = useMemo(() => {
-    if (authLoading && configured) return "…";
-    if (!user) return "Guest";
-    const meta = user.user_metadata;
-    const fromProfile = typeof meta?.full_name === "string" ? meta.full_name.trim() : "";
-    if (fromProfile) return fromProfile;
-    const fromEmail = user.email?.split("@")[0];
-    return fromEmail && fromEmail.length > 0 ? fromEmail : "Account";
-  }, [authLoading, configured, user]);
-
-  const avatarUrl = useMemo(() => {
-    const v = user?.user_metadata?.avatar_url;
-    return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
-  }, [user]);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/", { replace: true });
-  };
+  useLayoutEffect(() => {
+    const el = document.documentElement;
+    el.dataset.footerSidebarInset = "true";
+    el.style.setProperty("--app-footer-sidebar-inset", `${FOOTER_SIDEBAR_INSET_PX}px`);
+    return () => {
+      delete el.dataset.footerSidebarInset;
+      el.style.removeProperty("--app-footer-sidebar-inset");
+    };
+  }, []);
 
   return (
-    <div className="app-layout">
-      <AppHeader
-        theme={theme}
-        displayName={displayName}
-        avatarUrl={avatarUrl}
-        authConfigured={configured}
-        isAuthenticated={Boolean(user)}
-        onSignOut={handleSignOut}
-      />
-      <Outlet />
+    <div className="hm-history-root hm-ref hm-ref-page-with-sidebar">
+      <AppSidebar />
+      <div className="app-layout-main hm-ref-sidebar-main">
+        <AppLayoutMobileNav />
+        <div className="app-layout-outlet">
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 }
