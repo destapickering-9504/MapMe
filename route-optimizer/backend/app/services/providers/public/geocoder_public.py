@@ -37,11 +37,46 @@ def _viewbox_around_origin(lat: float, lng: float, span_deg: float) -> str:
     return f"{min_lon},{max_lat},{max_lon},{min_lat}"
 
 
+def _viewbox_covering_anchors(
+    primary: tuple[float, float],
+    stop_anchor: tuple[float, float] | None,
+    span_deg: float,
+) -> str:
+    """Viewbox that includes the trip anchor and optional stop-specific anchor."""
+    lats = [primary[0]]
+    lngs = [primary[1]]
+    if stop_anchor is not None:
+        lats.append(stop_anchor[0])
+        lngs.append(stop_anchor[1])
+    min_lat = max(-85.0, min(lats) - span_deg)
+    max_lat = min(85.0, max(lats) + span_deg)
+    min_lon = max(-180.0, min(lngs) - span_deg)
+    max_lon = min(180.0, max(lngs) + span_deg)
+    return f"{min_lon},{max_lat},{max_lon},{min_lat}"
+
+
 def _sort_by_distance_to_origin(
     places: list[ResolvedLocation], origin: tuple[float, float]
 ) -> list[ResolvedLocation]:
     olat, olng = origin
     return sorted(places, key=lambda p: haversine_m(olat, olng, p.lat, p.lng))
+
+
+def _sort_by_distance_to_trip_and_stop_anchor(
+    places: list[ResolvedLocation],
+    trip_anchor: tuple[float, float],
+    stop_anchor: tuple[float, float],
+) -> list[ResolvedLocation]:
+    """Prefer results that are not far from either the trip anchor or the stop address anchor."""
+    tlat, tlng = trip_anchor
+    slat, slng = stop_anchor
+
+    def key(p: ResolvedLocation) -> float:
+        d_trip = haversine_m(tlat, tlng, p.lat, p.lng)
+        d_stop = haversine_m(slat, slng, p.lat, p.lng)
+        return d_trip + d_stop
+
+    return sorted(places, key=key)
 
 
 class PublicGeocoderProvider(GeocoderProvider):
@@ -69,16 +104,26 @@ class PublicGeocoderProvider(GeocoderProvider):
         return places[0] if places else None
 
     async def candidates_for_store(
-        self, store_query: str, origin: tuple[float, float]
+        self,
+        store_query: str,
+        origin: tuple[float, float],
+        *,
+        stop_anchor: tuple[float, float] | None = None,
     ) -> list[ResolvedLocation]:
         lat, lng = origin
+        span = settings.public_geocoder_viewbox_degrees
+        viewbox = (
+            _viewbox_covering_anchors(origin, stop_anchor, span)
+            if stop_anchor is not None
+            else _viewbox_around_origin(lat, lng, span)
+        )
         limit = min(max(settings.public_geocoder_limit, 1), 40)
         params = {
             "q": store_query,
             "format": "jsonv2",
             "limit": str(limit),
             # Nominatim does not use lat/lon on /search; viewbox boosts same-region matches.
-            "viewbox": _viewbox_around_origin(lat, lng, settings.public_geocoder_viewbox_degrees),
+            "viewbox": viewbox,
             "bounded": "0",
         }
         headers = {
@@ -96,34 +141,6 @@ class PublicGeocoderProvider(GeocoderProvider):
         if not isinstance(payload, list):
             return []
         places = _places_from_nominatim_payload(payload)
+        if stop_anchor is not None:
+            return _sort_by_distance_to_trip_and_stop_anchor(places, origin, stop_anchor)
         return _sort_by_distance_to_origin(places, origin)
-
-    async def search_places_near(
-        self, search_term: str, origin: tuple[float, float]
-    ) -> list[ResolvedLocation]:
-        """Bounded Nominatim search inside a box around the user (same area, many hits)."""
-        lat, lng = origin
-        span = max(settings.public_nearby_viewbox_span_deg, 0.01)
-        limit = min(max(settings.public_nearby_max_results, 1), 40)
-        params = {
-            "q": search_term.strip(),
-            "format": "jsonv2",
-            "limit": str(limit),
-            "viewbox": _viewbox_around_origin(lat, lng, span),
-            "bounded": "1",
-        }
-        headers = {
-            "User-Agent": settings.public_user_agent,
-            "Accept": "application/json",
-        }
-        try:
-            async with httpx.AsyncClient(timeout=settings.public_request_timeout_seconds) as client:
-                response = await client.get(settings.public_geocode_url, params=params, headers=headers)
-                response.raise_for_status()
-            payload = response.json()
-        except (httpx.HTTPError, ValueError):
-            return []
-
-        if not isinstance(payload, list):
-            return []
-        return _places_from_nominatim_payload(payload)

@@ -1,7 +1,8 @@
 import type { OptimizeRequest, OptimizeResponse } from "../domain/routeTypes";
+import { getApiBaseUrl } from "../lib/apiBase";
 
 export async function optimizeRoute(payload: OptimizeRequest): Promise<OptimizeResponse> {
-  const response = await fetch("http://localhost:8000/api/optimize", {
+  const response = await fetch(`${getApiBaseUrl()}/api/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)

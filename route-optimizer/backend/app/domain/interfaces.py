@@ -12,15 +12,12 @@ class GeocoderProvider(ABC):
 
     @abstractmethod
     async def candidates_for_store(
-        self, store_query: str, origin: tuple[float, float]
+        self,
+        store_query: str,
+        origin: tuple[float, float],
+        *,
+        stop_anchor: tuple[float, float] | None = None,
     ) -> list[ResolvedLocation]:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def search_places_near(
-        self, search_term: str, origin: tuple[float, float]
-    ) -> list[ResolvedLocation]:
-        """POI / place search restricted to a map box around ``origin`` (provider-specific)."""
         raise NotImplementedError
 
 

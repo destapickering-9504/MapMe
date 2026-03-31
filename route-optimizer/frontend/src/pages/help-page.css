@@ -1,0 +1,317 @@
+.help-page {
+  font-family: var(--font-ui);
+  color: var(--theme-text);
+  padding: clamp(20px, 4vw, 36px);
+  background: linear-gradient(165deg, #f8fafc 0%, #e8f5f0 45%, #fff5f0 100%);
+  box-sizing: border-box;
+}
+
+:root[data-theme="dark"] .help-page {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% 20%, rgba(76, 191, 159, 0.12), transparent 55%),
+    linear-gradient(165deg, #0a0e14 0%, #121a2e 50%, #1a1520 100%);
+}
+
+.help-page__inner {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.help-page__card {
+  border-radius: 20px;
+  border: 1px solid var(--theme-border);
+  background: color-mix(in srgb, var(--theme-bg-card) 92%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--theme-shadow-soft);
+  padding: clamp(24px, 4vw, 36px);
+}
+
+:root[data-theme="light"] .help-page__card {
+  background: var(--theme-bg-card);
+  box-shadow: var(--theme-shadow);
+}
+
+.help-page__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.125rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--theme-text);
+  line-height: 1.15;
+}
+
+.help-page__rule {
+  margin: 22px 0;
+  border: none;
+  height: 1px;
+  background: var(--theme-border);
+}
+
+.help-page__section {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.help-page__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+
+.help-page__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.help-page__icon--bulb {
+  background: color-mix(in srgb, var(--hm-history-gold) 28%, transparent);
+  color: var(--hm-history-gold);
+  border-color: color-mix(in srgb, var(--hm-history-gold) 45%, transparent);
+}
+
+.help-page__icon--chat {
+  background: color-mix(in srgb, var(--theme-mint) 18%, transparent);
+  color: var(--theme-mint-deep);
+  border-color: color-mix(in srgb, var(--theme-mint) 35%, transparent);
+}
+
+.help-page__icon--mail {
+  background: color-mix(in srgb, var(--theme-mint) 18%, transparent);
+  color: var(--theme-mint-deep);
+  border-color: color-mix(in srgb, var(--theme-mint) 35%, transparent);
+}
+
+.help-page__section-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.help-page__section-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--theme-text);
+  letter-spacing: -0.02em;
+}
+
+.help-page__ol {
+  margin: 0;
+  padding-left: 1.35rem;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.7;
+  color: var(--theme-text-muted);
+}
+
+.help-page__ol li + li {
+  margin-top: 6px;
+}
+
+.help-page__ol strong {
+  color: var(--theme-text);
+  font-weight: 700;
+}
+
+.help-page__faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-page__details {
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--theme-bg-panel) 55%, transparent);
+  overflow: hidden;
+}
+
+.help-page__summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text);
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.help-page__summary:hover {
+  background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+}
+
+.help-page__summary::-webkit-details-marker {
+  display: none;
+}
+
+.help-page__summary-text {
+  text-align: left;
+  line-height: 1.4;
+}
+
+.help-page__chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.help-page__details[open] .help-page__chevron {
+  transform: rotate(90deg);
+}
+
+.help-page__answer {
+  margin: 0;
+  padding: 0 14px 14px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--theme-text-muted);
+  border-top: 1px solid var(--theme-border);
+  padding-top: 12px;
+}
+
+.help-page__answer a {
+  color: var(--theme-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.help-page__answer a:hover {
+  color: var(--theme-mint-deep);
+}
+
+.help-page__answer a:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--theme-glow-accent);
+}
+
+.help-page__inline-action {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--theme-text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.help-page__inline-action:hover {
+  color: var(--theme-mint-deep);
+}
+
+.help-page__inline-action:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--theme-glow-accent);
+}
+
+.help-page__contact {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--theme-text-muted);
+}
+
+.help-page__contact a {
+  color: var(--theme-text);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.help-page__contact a:hover {
+  color: var(--theme-mint-deep);
+}
+
+.help-page__contact a:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--theme-glow-accent);
+}
+
+/* Modal shell (portal); full-page gradient removed — backdrop provides dim */
+.help-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 28px);
+  box-sizing: border-box;
+  background: color-mix(in srgb, #0f172a 45%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+:root[data-theme="dark"] .help-modal-backdrop {
+  background: color-mix(in srgb, #020617 72%, transparent);
+}
+
+.help-modal-dialog {
+  width: min(560px, 100%);
+  max-height: min(88dvh, 900px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.help-modal__card {
+  position: relative;
+  padding-top: clamp(28px, 4vw, 40px);
+}
+
+.help-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--theme-text-muted);
+  background: color-mix(in srgb, var(--theme-text) 6%, transparent);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.help-modal__close:hover {
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-text) 10%, transparent);
+}
+
+.help-modal__close:focus-visible {
+  outline: none;
+  box-shadow: var(--theme-glow-accent);
+}

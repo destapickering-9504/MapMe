@@ -18,6 +18,11 @@ class OptimizeRequest(BaseModel):
         max_length=300,
         description="Full street address, ZIP, city, or town for the starting point",
     )
+    origin_label: Optional[str] = Field(
+        default=None,
+        max_length=80,
+        description="Optional display-only label when start is a saved place (Home, Gym, …).",
+    )
     stores: list[str] = Field(min_length=1, max_length=10)
     trip_mode: str = Field(default="round_trip", pattern="^(round_trip|one_way)$")
     destination_place: Optional[str] = Field(
@@ -72,39 +77,10 @@ class RouteOption(BaseModel):
     total_minutes: float
 
 
-class NearbyRequest(BaseModel):
-    origin_place: str = Field(..., max_length=300, description="Starting point; search is anchored here.")
-    search: str = Field(..., max_length=200, description="Store type or name to find nearby (e.g. Target, pharmacy).")
-
-    @field_validator("origin_place", "search")
-    @classmethod
-    def strip_nonempty(cls, value: str) -> str:
-        s = value.strip()
-        if not s:
-            raise ValueError("cannot be empty")
-        return s
-
-
-class NearbyPlace(BaseModel):
-    name: str
-    address: str
-    lat: float
-    lng: float
-    distance_m: float
-
-
-class NearbyResponse(BaseModel):
-    origin_query: str
-    origin_address: str
-    origin_lat: float
-    origin_lng: float
-    search: str
-    places: list[NearbyPlace]
-
-
 class OptimizeResponse(BaseModel):
     trip_mode: str
     origin_query: str
+    origin_label: Optional[str] = None
     origin_address: str
     origin_lat: float
     origin_lng: float
@@ -113,6 +89,10 @@ class OptimizeResponse(BaseModel):
     best_route: RouteOption
     alternatives: list[RouteOption]
     explanation: str
+    travel_time_note: str = Field(
+        ...,
+        description="How drive times are estimated (traffic model) and optional congestion fudge.",
+    )
     best_route_geojson: Optional[dict[str, Any]] = None
     route_geojson_options: list[Optional[dict[str, Any]]] = Field(
         default_factory=list,

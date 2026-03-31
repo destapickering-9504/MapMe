@@ -13,9 +13,14 @@ class Settings(BaseModel):
     public_user_agent: str = os.getenv("PUBLIC_USER_AGENT", "route-optimizer-local/0.1")
     # Stops resolved within this radius (m) share one parking lot: store↔store matrix legs become 0 min.
     optimizer_same_lot_radius_m: float = float(os.getenv("OPTIMIZER_SAME_LOT_RADIUS_M", "500"))
-    public_nearby_viewbox_span_deg: float = float(os.getenv("PUBLIC_NEARBY_VIEWBOX_SPAN_DEG", "0.06"))
-    public_nearby_max_results: int = int(os.getenv("PUBLIC_NEARBY_MAX_RESULTS", "24"))
-    public_nearby_max_distance_m: float = float(os.getenv("PUBLIC_NEARBY_MAX_DISTANCE_M", "15000"))
+    # Top N geocoder hits per stop to try as alternate store locations (chain options).
+    optimizer_chain_alt_ranks: int = int(os.getenv("OPTIMIZER_CHAIN_ALT_RANKS", "4"))
+    # Optional congestion fudge: comma-separated south,west,north,east (decimal degrees).
+    # Legs whose midpoint or an endpoint falls in the box get duration × multiplier (>1).
+    optimizer_congestion_bbox: str = os.getenv("OPTIMIZER_CONGESTION_BBOX", "")
+    optimizer_congestion_leg_multiplier: float = float(
+        os.getenv("OPTIMIZER_CONGESTION_LEG_MULTIPLIER", "1.0")
+    )
     public_suggest_min_chars: int = int(os.getenv("PUBLIC_SUGGEST_MIN_CHARS", "3"))
     public_suggest_limit: int = int(os.getenv("PUBLIC_SUGGEST_LIMIT", "8"))
 

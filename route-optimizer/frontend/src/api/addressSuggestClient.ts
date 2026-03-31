@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from "../lib/apiBase";
+
 export interface AddressSuggestion {
   label: string;
   lat: number;
@@ -10,7 +12,7 @@ export async function fetchAddressSuggestions(query: string): Promise<AddressSug
     return [];
   }
   const response = await fetch(
-    `http://localhost:8000/api/geocode/suggest?q=${encodeURIComponent(q)}`
+    `${getApiBaseUrl()}/api/geocode/suggest?q=${encodeURIComponent(q)}`
   );
   if (!response.ok) {
     return [];

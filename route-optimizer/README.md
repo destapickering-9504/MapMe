@@ -6,8 +6,33 @@ Local-first store route optimizer built with React + FastAPI.
 
 - Frontend: React + TypeScript + Vite
 - Backend: Python + FastAPI
+- Auth & saved trips (optional): [Supabase](https://supabase.com) (free tier)
 - Tests: Vitest + Pytest
 - Coverage policy: 85% line and branch minimum
+
+## Supabase (sign-in + saved routes)
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. **SQL**: In the Supabase dashboard, open **SQL Editor**, paste and run `supabase/schema.sql` (all-in-one). Alternatively run the modular files in order: `supabase/tables/saved_trips.sql`, `supabase/storage/avatars_bucket.sql`, `supabase/functions/list_saved_trips_page.sql`. After editing those modules, regenerate the bundle with `supabase/build-schema.sh`. This creates `saved_trips` + RLS, the **`list_saved_trips_page`** RPC for History, and the **avatars** Storage bucket with policies. Existing projects that already have the table can run only `supabase/functions/list_saved_trips_page.sql` to add or update the RPC.
+   - **Profile photo & cover uploads** use that bucket at paths `{your-user-id}/avatar` and `{your-user-id}/profile-banner`. If the app shows errors like **bucket not found** or **row-level security** on upload, enable **Storage** on the project and re-run the SQL block for `storage.buckets` / `storage.objects` policies.
+3. **API keys**: **Project Settings → API** (or **Connect**) — copy **Project URL** and the **publishable** client key (`sb_publishable_…`) or legacy **anon** JWT (`eyJ…`). Put the key in `VITE_SUPABASE_ANON_KEY` (name is historical; the value can be either key type Supabase shows for browser clients).
+4. **Frontend env**: `cd frontend && cp .env.example .env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+The **Postgres “direct connection”** string is only for database tools or a backend using `psql`/SQL drivers — do not put your DB password in the Vite frontend.
+
+Without these variables, the app still runs; the header shows a short note and saved trips stay local-only.
+
+**“Failed to fetch” when signing in:** The browser cannot reach your Supabase project. Re-copy **Project URL** from **Settings → API** into `frontend/.env.local` (must match exactly, usually `https://xxxxx.supabase.co`). Ensure the project is **not paused**, restart `npm run dev` after env changes, and try without VPN/ad blockers.
+
+**Email (6-digit code only)**: This app uses **OTP**, not magic links: `signInWithOtp` is called **without** `emailRedirectTo`. In the Supabase dashboard, open **Authentication → Email Templates** (e.g. **Magic Link**) and put the code in the body with **`{{ .Token }}`** (you can remove or ignore `{{ .ConfirmationURL }}` if you want a code-only email). See [Email OTP / passwordless](https://supabase.com/docs/guides/auth/auth-email-passwordless).
+
+**“Token has expired or is invalid” when verifying the code:** (1) Use **only the latest** code after **Resend** — each new email invalidates the previous one. (2) Enter the **six digits** from the email (not characters from a link URL). (3) Confirm the **Magic link** template actually includes **`{{ .Token }}`**; link-only emails have no valid OTP to type. (4) The app sends the email address **lowercased** to match Supabase.
+
+## Frontend routes
+
+- **`/`** — Map Me auth wizard: email + OTP, optional profile, or guest.
+- **`/sign-in`**, **`/sign-up`** — Redirect to **`/`** (legacy paths).
+- **`/routeoptimizer`** — Route Optimizer map and planner.
 
 ## Run
 
@@ -18,6 +43,8 @@ cd frontend
 npm install
 npm run dev
 ```
+
+Then open `http://localhost:5173/` (or the port Vite prints). Use **`/routeoptimizer`** for the planner.
 
 ### Backend
 

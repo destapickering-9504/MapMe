@@ -1,7 +1,18 @@
+import type { ReactElement } from "react";
+import { useLayoutEffect } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
-import type { NearbyResponse, OptimizeResponse } from "../domain/routeTypes";
 import RouteMap from "../components/RouteMap";
+import type { OptimizeResponse } from "../domain/routeTypes";
+import { ThemeProvider, useTheme } from "../theme/ThemeContext";
+
+function ForceDarkTheme() {
+  const { setTheme } = useTheme();
+  useLayoutEffect(() => {
+    setTheme("dark");
+  }, [setTheme]);
+  return null;
+}
 
 const baseResult: OptimizeResponse = {
   trip_mode: "round_trip",
@@ -18,19 +29,24 @@ const baseResult: OptimizeResponse = {
   },
   alternatives: [],
   explanation: "ok",
+  travel_time_note: "Drive times are estimates without live traffic.",
   best_route_geojson: null
 };
+
+function renderMap(ui: ReactElement) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>);
+}
 
 describe("RouteMap", () => {
   afterEach(() => cleanup());
 
-  test("shows placeholder when there is no result and no nearby data", () => {
-    render(<RouteMap result={null} nearby={null} selectedRouteIndex={0} />);
-    expect(screen.getByText(/Plan your Route/)).toBeTruthy();
+  test("shows placeholder when there is no result", () => {
+    renderMap(<RouteMap result={null} selectedRouteIndex={0} />);
+    expect(screen.getByText(/Optimize a route to see the map/)).toBeTruthy();
   });
 
   test("renders map container when result is present", () => {
-    render(<RouteMap result={baseResult} nearby={null} selectedRouteIndex={0} />);
+    renderMap(<RouteMap result={baseResult} selectedRouteIndex={0} />);
     expect(screen.getByTestId("map-container")).toBeTruthy();
   });
 
@@ -43,20 +59,17 @@ describe("RouteMap", () => {
       destination_lng: -122.2,
       trip_mode: "one_way"
     };
-    render(<RouteMap result={withDest} nearby={null} selectedRouteIndex={0} />);
+    renderMap(<RouteMap result={withDest} selectedRouteIndex={0} />);
     expect(screen.getByTestId("map-container")).toBeTruthy();
   });
 
-  test("renders map container when only nearby data is present", () => {
-    const nearby: NearbyResponse = {
-      origin_query: "94102",
-      origin_address: "San Francisco, CA",
-      origin_lat: 37.77,
-      origin_lng: -122.42,
-      search: "Target",
-      places: [{ name: "Target", address: "1 Main St", lat: 37.78, lng: -122.41, distance_m: 500 }]
-    };
-    render(<RouteMap result={null} nearby={nearby} selectedRouteIndex={0} />);
+  test("renders embedded map in dark theme (planner styling path)", () => {
+    render(
+      <ThemeProvider>
+        <ForceDarkTheme />
+        <RouteMap result={baseResult} selectedRouteIndex={0} embedded />
+      </ThemeProvider>
+    );
     expect(screen.getByTestId("map-container")).toBeTruthy();
   });
 });

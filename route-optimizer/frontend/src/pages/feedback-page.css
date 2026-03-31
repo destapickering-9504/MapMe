@@ -1,0 +1,100 @@
+.feedback-page {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  background: var(--theme-bg-page);
+  font-family: var(--font-ui);
+}
+
+.feedback-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+}
+
+.feedback-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+:root[data-theme="light"] .feedback-modal-backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.feedback-modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 1.5rem 1.35rem;
+  border-radius: 18px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-bg-card);
+  box-shadow: var(--theme-shadow);
+  color: var(--theme-text);
+}
+
+.feedback-modal__title {
+  margin: 0 0 0.65rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.feedback-modal__body {
+  margin: 0 0 1.35rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--theme-text-muted);
+}
+
+.feedback-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.feedback-modal__btn {
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--theme-salmon) 0%, var(--theme-salmon-deep) 100%);
+  color: var(--theme-salmon-on-accent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-salmon-deep) 35%, transparent);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.feedback-modal__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--theme-salmon-deep) 42%, transparent);
+}
+
+.feedback-modal__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--theme-glow-accent), 0 4px 14px color-mix(in srgb, var(--theme-salmon-deep) 35%, transparent);
+}
+
+.feedback-modal__btn:active {
+  transform: translateY(0);
+}

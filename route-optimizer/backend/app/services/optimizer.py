@@ -75,6 +75,31 @@ def best_route_with_alternatives(
     return scored[:top_n]
 
 
+def best_route_one_way_end_last_list_stop(
+    matrix: list[list[float]],
+    num_stores: int,
+    top_n: int = 3,
+) -> list[tuple[list[int], float]]:
+    """One-way without a separate destination: finish at the last stop in the submitted list.
+
+    Store indices follow ``payload.stores`` order; index ``num_stores - 1`` must be visited last.
+    Earlier stops may still be reordered for shortest time.
+    """
+    if num_stores < 1:
+        return []
+    idx = list(range(num_stores))
+    last = num_stores - 1
+    scored: list[tuple[list[int], float]] = []
+    for order in permutations(idx):
+        ol = list(order)
+        if ol[-1] != last:
+            continue
+        minutes = score_route_order(matrix, ol, round_trip=False)
+        scored.append((ol, minutes))
+    scored.sort(key=lambda item: item[1])
+    return scored[:top_n]
+
+
 def best_route_with_fixed_destination(
     matrix: list[list[float]],
     num_stores: int,
@@ -89,3 +114,37 @@ def best_route_with_fixed_destination(
         scored.append((ol, minutes))
     scored.sort(key=lambda item: item[1])
     return scored[:top_n]
+
+
+def best_permutation_round_trip(
+    matrix: list[list[float]], num_stores: int, round_trip: bool
+) -> tuple[list[int], float]:
+    """Single fastest visit order for a fixed store-location assignment."""
+    idx = list(range(num_stores))
+    best_order: list[int] | None = None
+    best_minutes = float("inf")
+    for order in permutations(idx):
+        ol = list(order)
+        minutes = score_route_order(matrix, ol, round_trip)
+        if minutes < best_minutes:
+            best_minutes = minutes
+            best_order = ol
+    assert best_order is not None
+    return best_order, best_minutes
+
+
+def best_permutation_fixed_destination(
+    matrix: list[list[float]], num_stores: int
+) -> tuple[list[int], float]:
+    """Single fastest visit order for a fixed assignment ending at a fixed destination row."""
+    idx = list(range(num_stores))
+    best_order: list[int] | None = None
+    best_minutes = float("inf")
+    for order in permutations(idx):
+        ol = list(order)
+        minutes = score_route_to_fixed_destination(matrix, ol, num_stores)
+        if minutes < best_minutes:
+            best_minutes = minutes
+            best_order = ol
+    assert best_order is not None
+    return best_order, best_minutes

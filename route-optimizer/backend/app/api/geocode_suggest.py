@@ -14,10 +14,7 @@ router = APIRouter(prefix="/api", tags=["geocode"])
 async def address_suggest(
     q: str = Query("", max_length=280, description="Partial address or place name"),
 ) -> AddressSuggestResponse:
-    """Autocomplete-style address search (Nominatim in public mode)."""
-    if settings.provider_mode != "public":
-        return AddressSuggestResponse(suggestions=[])
-
+    """Autocomplete-style address search via Nominatim (same for all provider modes)."""
     text = q.strip()
     if len(text) < settings.public_suggest_min_chars:
         return AddressSuggestResponse(suggestions=[])
