@@ -1,0 +1,10 @@
+{
+  "name": "mapme-user-manual-pdf",
+  "private": true,
+  "scripts": {
+    "pdf": "./build-pdf.sh"
+  },
+  "devDependencies": {
+    "md-to-pdf": "^5.2.4"
+  }
+}
