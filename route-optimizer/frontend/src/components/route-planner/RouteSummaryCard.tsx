@@ -1,5 +1,13 @@
+import { useMemo } from "react";
+
 import "./plannerRef.css";
 import type { OptimizeResponse } from "../../domain/routeTypes";
+import {
+  buildExternalNavigationLinks,
+  type ExternalNavigationLinks
+} from "../../lib/externalDirections/externalNavigationLinks";
+import { orderedLatLngPointsForExternalDirections } from "../../lib/externalDirections/googleMapsDirectionsUrl";
+import { externalDirectionsTravelModeKeyFromResult } from "../../lib/externalDirections/travelModes";
 import { chainHaversineMiles } from "../../lib/haversineRouteMiles";
 import { plannerStopCommonLabel } from "../../lib/plannerStopLabel";
 import { routeOptionByIndex, routeOptionCount } from "../../map/routeSelection";
@@ -16,6 +24,47 @@ interface Props {
   favoriteError: string | null;
   onToggleFavorite: () => void;
   onOptimizeNewRoute: () => void;
+}
+
+function RouteExternalNavLinks({ links, routeLabel }: { links: ExternalNavigationLinks; routeLabel: string }) {
+  const truncated = links.google.truncated || links.apple.truncated;
+  const truncHint =
+    "Too many stops for this app link; showing start to final destination only. Add middle stops in the app if needed.";
+  return (
+    <div className="hm-ref-planner-route-maps-group" role="group" aria-label={`Open ${routeLabel} in maps`}>
+      <a
+        href={links.google.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hm-ref-planner-route-maps-link"
+        title={truncated ? `Google Maps — ${truncHint}` : `Google Maps — ${routeLabel}`}
+      >
+        Google
+      </a>
+      <a
+        href={links.apple.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hm-ref-planner-route-maps-link"
+        title={truncated ? `Apple Maps — ${truncHint}` : `Apple Maps — ${routeLabel}`}
+      >
+        Apple
+      </a>
+      <a
+        href={links.waze.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hm-ref-planner-route-maps-link"
+        title={
+          links.waze.opensFinalStopOnly
+            ? `Waze — opens navigation to your final stop; add earlier stops in Waze if needed.`
+            : `Waze — ${routeLabel}`
+        }
+      >
+        Waze
+      </a>
+    </div>
+  );
 }
 
 function milesAlongSelectedRoute(result: OptimizeResponse, index: number): number {
@@ -90,6 +139,17 @@ export default function RouteSummaryCard({
       lat: result.origin_lat,
       lng: result.origin_lng
     });
+
+  const navigationLinksByRouteIndex = useMemo((): (ExternalNavigationLinks | null)[] => {
+    const travelKey = externalDirectionsTravelModeKeyFromResult(result.transport_mode);
+    const count = routeOptionCount(result);
+    const out: (ExternalNavigationLinks | null)[] = [];
+    for (let i = 0; i < count; i++) {
+      const pts = orderedLatLngPointsForExternalDirections(result, i);
+      out.push(buildExternalNavigationLinks(pts, travelKey));
+    }
+    return out;
+  }, [result]);
 
   return (
     <aside
@@ -188,6 +248,16 @@ export default function RouteSummaryCard({
         </div>
       </div>
 
+      {n === 1 && navigationLinksByRouteIndex[0] ? (
+        <div className="hm-ref-planner-route-row mb-3">
+          <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-[color:var(--ref-title,#f8fafc)]">
+            Route 1
+            <span className="hm-ref-planner-summary-sage ml-1 font-semibold">· best</span>
+          </span>
+          <RouteExternalNavLinks links={navigationLinksByRouteIndex[0]!} routeLabel="Route 1" />
+        </div>
+      ) : null}
+
       <ol className="mb-4 list-none space-y-2.5 border-t border-[color:var(--ref-line,rgba(255,255,255,0.09))] p-0 pt-4">
         {!isRound ? (
           <li key="summary-start" className="flex items-start gap-3 text-[14px]">
@@ -239,41 +309,45 @@ export default function RouteSummaryCard({
       {n > 1 ? (
         <div className="mt-4 border-t border-[color:var(--ref-line,rgba(255,255,255,0.09))] pt-4">
           <p className="hm-ref-planner-other-label">Other routes</p>
-          <ul className="flex flex-col gap-1.5 p-0" role="radiogroup" aria-label="Route options">
-            {allOptions.map((opt, idx) => (
-              <li key={`route-${idx}-${opt.total_minutes}`} className="list-none">
-                <label
-                  className={[
-                    "hm-ref-planner-route-pill",
-                    selectedRouteIndex === idx ? "hm-ref-planner-route-pill--active" : ""
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <input
-                    type="radio"
-                    name="route-option-summary"
-                    checked={selectedRouteIndex === idx}
-                    onChange={() => onSelectRoute(idx)}
-                    aria-label={idx === 0 ? "Route 1 suggested fastest" : `Route ${idx + 1} alternative`}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-semibold text-[color:var(--ref-title,#f8fafc)]">
-                      Route {idx + 1}
-                      {idx === 0 ? (
-                        <span className="hm-ref-planner-summary-sage ml-1 font-semibold">· best</span>
-                      ) : null}
+          <ul className="flex flex-col gap-2 p-0" role="radiogroup" aria-label="Route options">
+            {allOptions.map((opt, idx) => {
+              const nav = navigationLinksByRouteIndex[idx];
+              return (
+                <li key={`route-${idx}-${opt.total_minutes}`} className="hm-ref-planner-route-row list-none">
+                  <label
+                    className={[
+                      "hm-ref-planner-route-pill",
+                      selectedRouteIndex === idx ? "hm-ref-planner-route-pill--active" : ""
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <input
+                      type="radio"
+                      name="route-option-summary"
+                      checked={selectedRouteIndex === idx}
+                      onChange={() => onSelectRoute(idx)}
+                      aria-label={idx === 0 ? "Route 1 suggested fastest" : `Route ${idx + 1} alternative`}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] font-semibold text-[color:var(--ref-title,#f8fafc)]">
+                        Route {idx + 1}
+                        {idx === 0 ? (
+                          <span className="hm-ref-planner-summary-sage ml-1 font-semibold">· best</span>
+                        ) : null}
+                      </span>
+                      <span className="block text-[11px] leading-snug text-[color:var(--ref-meta,#7b8394)]">
+                        {opt.ordered_stores.join(" → ")}
+                      </span>
                     </span>
-                    <span className="block text-[11px] leading-snug text-[color:var(--ref-meta,#7b8394)]">
-                      {opt.ordered_stores.join(" → ")}
+                    <span className="shrink-0 text-[11px] font-bold tabular-nums text-[color:var(--ref-meta,#7b8394)]">
+                      {Math.round(opt.total_minutes)}m
                     </span>
-                  </span>
-                  <span className="shrink-0 text-[11px] font-bold tabular-nums text-[color:var(--ref-meta,#7b8394)]">
-                    {Math.round(opt.total_minutes)}m
-                  </span>
-                </label>
-              </li>
-            ))}
+                  </label>
+                  {nav ? <RouteExternalNavLinks links={nav} routeLabel={`Route ${idx + 1}`} /> : null}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

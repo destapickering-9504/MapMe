@@ -834,6 +834,58 @@ details[open] .hm-ref-planner-saved-chevron {
   accent-color: var(--ref-sage, #5cba98);
 }
 
+.hm-ref-planner-route-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hm-ref-planner-route-row .hm-ref-planner-route-pill {
+  flex: 1;
+  min-width: 0;
+}
+
+.hm-ref-planner-route-maps-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hm-ref-planner-route-maps-group .hm-ref-planner-route-maps-link {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.hm-ref-planner-route-maps-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--ref-sage, #5cba98) 42%, var(--ref-line, rgba(255, 255, 255, 0.09)));
+  background: color-mix(in srgb, var(--ref-sage, #5cba98) 10%, transparent);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: color-mix(in srgb, var(--ref-sage, #5cba98) 92%, #fff);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    filter 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.hm-ref-planner-route-maps-link:hover {
+  filter: brightness(1.06);
+  border-color: color-mix(in srgb, var(--ref-sage, #5cba98) 55%, var(--ref-line, rgba(255, 255, 255, 0.09)));
+  background: color-mix(in srgb, var(--ref-sage, #5cba98) 16%, transparent);
+}
+
 .hm-ref-planner-other-label {
   margin: 0 0 8px;
   font-size: 11px;
@@ -982,6 +1034,17 @@ details[open] .hm-ref-planner-saved-chevron {
 :root[data-theme="light"] .hm-history-root.hm-ref .hm-ref-planner-route-pill--active {
   border-color: color-mix(in srgb, var(--ref-sage) 45%, var(--ref-line));
   background: color-mix(in srgb, var(--ref-sage) 12%, var(--ref-card-a));
+}
+
+:root[data-theme="light"] .hm-history-root.hm-ref .hm-ref-planner-route-maps-link {
+  border-color: color-mix(in srgb, var(--ref-sage) 38%, var(--ref-line));
+  color: color-mix(in srgb, var(--ref-sage) 55%, #14532d);
+  background: color-mix(in srgb, var(--ref-sage) 10%, var(--ref-card-a));
+}
+
+:root[data-theme="light"] .hm-history-root.hm-ref .hm-ref-planner-route-maps-link:hover {
+  border-color: color-mix(in srgb, var(--ref-sage) 48%, var(--ref-line));
+  background: color-mix(in srgb, var(--ref-sage) 16%, var(--ref-card-a));
 }
 
 :root[data-theme="light"] .hm-history-root.hm-ref .hm-ref-planner-map-fake-control {
